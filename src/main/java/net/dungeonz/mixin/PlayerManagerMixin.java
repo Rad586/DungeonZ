@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
@@ -39,16 +40,47 @@ public class PlayerManagerMixin {
 
     @Inject(method = "respawnPlayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ServerWorld;onPlayerRespawned(Lnet/minecraft/server/network/ServerPlayerEntity;)V"), locals = LocalCapture.CAPTURE_FAILSOFT)
     private void respawnPlayerMixin(ServerPlayerEntity oldPlayer, boolean alive, CallbackInfoReturnable<ServerPlayerEntity> info, BlockPos blockPos, float f, boolean bl, ServerWorld serverWorld,
-            Optional<Vec3d> optional2, ServerWorld serverWorld2, ServerPlayerEntity serverPlayerEntity) {
+            Optional<Vec3d> optional, ServerWorld serverWorld2, ServerPlayerEntity serverPlayerEntity) {
         if (!alive && oldPlayer.getWorld().getRegistryKey() == DimensionInit.DUNGEON_WORLD && DungeonHelper.getDungeonPortalEntity(oldPlayer) != null) {
             DungeonPortalEntity dungeonPortalEntity = DungeonHelper.getDungeonPortalEntity(oldPlayer);
-            dungeonPortalEntity.getDungeonPlayerUuids().remove(oldPlayer.getUuid());
-            dungeonPortalEntity.addDeadDungeonPlayerUuids(serverPlayerEntity.getUuid());
-            if (dungeonPortalEntity.getDungeonPlayerCount() == 0) {
-                dungeonPortalEntity.setCooldownTime(dungeonPortalEntity.getDungeon().getCooldown() + (int) serverWorld.getTime());
+            if (!dungeonPortalEntity.getDungeon().isRespawnAllowed()) {
+                dungeonPortalEntity.getDungeonPlayerUuids().remove(oldPlayer.getUuid());
+                dungeonPortalEntity.addDeadDungeonPlayerUuids(serverPlayerEntity.getUuid());
+                if (dungeonPortalEntity.getDungeonPlayerCount() == 0) {
+                    dungeonPortalEntity.setCooldownTime(dungeonPortalEntity.getDungeon().getCooldown() + (int) serverWorld.getTime());
+                }
+                dungeonPortalEntity.markDirty();
             }
-            dungeonPortalEntity.markDirty();
         }
+    }
+
+    @ModifyVariable(method = "respawnPlayer", at = @At(value = "INVOKE", target = "Ljava/util/Optional;isPresent()Z", ordinal = 0), ordinal = 0)
+    private Optional<Vec3d> respawnPlayerMixin(Optional<Vec3d> original, ServerPlayerEntity oldPlayer, boolean alive) {
+        if (!alive && oldPlayer.getWorld().getRegistryKey() == DimensionInit.DUNGEON_WORLD && DungeonHelper.getDungeonPortalEntity(oldPlayer) != null
+                && DungeonHelper.getDungeonPortalEntity(oldPlayer).getDungeon().isRespawnAllowed()) {
+            BlockPos pos = DungeonHelper.getDungeonPortalEntity(oldPlayer).getPos();
+            return Optional.of(new Vec3d(pos.getX() * 16, 100, pos.getZ() * 16));
+        }
+        return original;
+    }
+
+    @ModifyVariable(method = "respawnPlayer", at = @At(value = "INVOKE", target = "Ljava/util/Optional;isPresent()Z", ordinal = 0), ordinal = 0)
+    private BlockPos respawnPlayerMixin(BlockPos original, ServerPlayerEntity oldPlayer, boolean alive) {
+        if (!alive && oldPlayer.getWorld().getRegistryKey() == DimensionInit.DUNGEON_WORLD && DungeonHelper.getDungeonPortalEntity(oldPlayer) != null
+                && DungeonHelper.getDungeonPortalEntity(oldPlayer).getDungeon().isRespawnAllowed()) {
+            BlockPos pos = DungeonHelper.getDungeonPortalEntity(oldPlayer).getPos();
+            return new BlockPos(pos.getX() * 16, 100, pos.getZ() * 16);
+        }
+        return original;
+    }
+
+    @ModifyVariable(method = "respawnPlayer", at = @At(value = "FIELD", target = "Lnet/minecraft/server/PlayerManager;server:Lnet/minecraft/server/MinecraftServer;", ordinal = 2), ordinal = 1)
+    private ServerWorld respawnPlayerMixin(ServerWorld original, ServerPlayerEntity oldPlayer, boolean alive) {
+        if (!alive && oldPlayer.getWorld().getRegistryKey() == DimensionInit.DUNGEON_WORLD && DungeonHelper.getDungeonPortalEntity(oldPlayer) != null
+                && DungeonHelper.getDungeonPortalEntity(oldPlayer).getDungeon().isRespawnAllowed()) {
+            return oldPlayer.getServerWorld();
+        }
+        return original;
     }
 
 }

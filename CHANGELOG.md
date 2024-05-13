@@ -1,7 +1,6 @@
 ### Added:
-- 
+- Added respawn option
 ### Fixed:
-- Fixed portal invisibility
-- Fixed teleport position
+- 
 ### Changed:
 - 

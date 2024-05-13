@@ -48,6 +48,7 @@ public class DungeonLoader implements SimpleSynchronousResourceReloadListener {
                 int minGroupSize = data.has("min_group_size") ? data.get("min_group_size").getAsInt() : 0;
                 int cooldown = data.get("cooldown").getAsInt();
                 boolean allowElytra = data.has("elytra") ? data.get("elytra").getAsBoolean() : false;
+                boolean allowRespawn = data.has("respawn") ? data.get("respawn").getAsBoolean() : true;
                 Identifier dungeonBackgroundId = new Identifier(data.has("background_texture") ? data.get("background_texture").getAsString() : "");
                 Identifier dungeonStructurePoolId = new Identifier(data.get("dungeon_structure_pool_id").getAsString());
 
@@ -125,10 +126,6 @@ public class DungeonLoader implements SimpleSynchronousResourceReloadListener {
                         exitBlockId = rawBlockId;
                     } else if (specificBlockObject.has("boss_loot_block") && specificBlockObject.get("boss_loot_block").getAsBoolean()) {
                         bossLootBlockId = rawBlockId;
-                        // blockIdBlockReplacement.put(rawBlockId, -1);
-                        // continue;
-                        // System.out.println("SET BOSS LOOT BLOCK YEJJ " + bossLootBlockId);// DBUSBDÜSUBDUSDBÜISBDÜISBDÜSBDSÜIDVBSÜVDBISVDSZVDPSVDPSVD
-
                     } else {
                         DungeonzMain.LOGGER.warn("{} has no set spawns nor exit block nor boss loot block nor boss entity", blockIterator);
                     }
@@ -206,7 +203,7 @@ public class DungeonLoader implements SimpleSynchronousResourceReloadListener {
 
                 Dungeon.addDungeon(new Dungeon(dungeonTypeId, blockIdEntityMap, blockIdEntitySpawnChance, blockIdBlockReplacement, spawnerEntityIdCountMap, requiredItemCountMap, breakableBlockIds,
                         placeableBlockIds, difficultyMobModificator, difficultyLootTableIds, difficultyBossModificator, difficultyBossLootTable, bossEntityType, bossNbtCompound, bossBlockId,
-                        bossLootBlockId, exitBlockId, allowElytra, maxGroupSize, minGroupSize, cooldown, dungeonBackgroundId, dungeonStructurePoolId));
+                        bossLootBlockId, exitBlockId, allowRespawn, allowElytra, maxGroupSize, minGroupSize, cooldown, dungeonBackgroundId, dungeonStructurePoolId));
             } catch (Exception e) {
                 DungeonzMain.LOGGER.error("Error occurred while loading resource {}. {}", id.toString(), e.toString());
             }

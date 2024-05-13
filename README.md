@@ -81,6 +81,7 @@ If you know how to create one, the folder path has to be ```data\dungeonz\dungeo
     "required": { // Items which get consumed after joining the dungeon
         "minecraft:stick": 3
     },
+    "respawn": false,
     "elytra": false,
     "max_group_size": 5,
     "min_group_size": 0, // optional

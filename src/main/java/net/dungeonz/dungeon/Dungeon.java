@@ -39,6 +39,7 @@ public class Dungeon {
 
     private final int exitBlockId;
 
+    private final boolean allowRespawn;
     private final boolean allowElytra;
 
     private final int maxGroupSize;
@@ -51,8 +52,8 @@ public class Dungeon {
     public Dungeon(String dungeonTypeId, HashMap<Integer, List<EntityType<?>>> blockIdEntityMap, HashMap<Integer, HashMap<String, Float>> blockIdEntitySpawnChance,
             HashMap<Integer, Integer> blockIdBlockReplacement, HashMap<Integer, Integer> spawnerEntityIdCountMap, HashMap<Integer, Integer> requiredItemCountMap, List<Integer> breakableBlockIds,
             List<Integer> placeableBlockIds, HashMap<String, Float> difficultyMobModificator, HashMap<String, List<String>> difficultyLootTableIds, HashMap<String, Float> difficultyBossModificator,
-            HashMap<String, String> difficultyBossLootTable, EntityType<?> bossEntityType, NbtCompound bossNbtCompound, int bossBlockId, int bossLootBlockId, int exitBlockId, boolean allowElytra,
-            int maxGroupSize, int minGroupSize, int cooldown, Identifier dungeonBackgroundId, Identifier dungeonStructurePoolId) {
+            HashMap<String, String> difficultyBossLootTable, EntityType<?> bossEntityType, NbtCompound bossNbtCompound, int bossBlockId, int bossLootBlockId, int exitBlockId, boolean allowRespawn,
+            boolean allowElytra, int maxGroupSize, int minGroupSize, int cooldown, Identifier dungeonBackgroundId, Identifier dungeonStructurePoolId) {
         this.dungeonTypeId = dungeonTypeId;
         this.blockIdEntityMap = blockIdEntityMap;
         this.blockIdEntitySpawnChance = blockIdEntitySpawnChance;
@@ -70,6 +71,7 @@ public class Dungeon {
         this.bossBlockId = bossBlockId;
         this.bossLootBlockId = bossLootBlockId;
         this.exitBlockId = exitBlockId;
+        this.allowRespawn = allowRespawn;
         this.allowElytra = allowElytra;
         this.maxGroupSize = maxGroupSize;
         this.minGroupSize = minGroupSize;
@@ -173,6 +175,10 @@ public class Dungeon {
 
     public boolean isElytraAllowed() {
         return this.allowElytra;
+    }
+
+    public boolean isRespawnAllowed() {
+        return this.allowRespawn;
     }
 
     public boolean containsBlockId(int blockId) {
