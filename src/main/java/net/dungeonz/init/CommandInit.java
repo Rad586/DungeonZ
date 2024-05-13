@@ -1,5 +1,6 @@
 package net.dungeonz.init;
 
+import net.dungeonz.block.entity.DungeonPortalEntity;
 import net.dungeonz.util.DungeonHelper;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.server.command.CommandManager;
@@ -21,6 +22,14 @@ public class CommandInit {
     private static int executeDungeonCommand(ServerCommandSource source) {
         if (source.getPlayer() != null) {
             if (DungeonHelper.getCurrentDungeon(source.getPlayer()) != null) {
+                if (DungeonHelper.getDungeonPortalEntity(source.getPlayer()) != null) {
+                    DungeonPortalEntity dungeonPortalEntity = DungeonHelper.getDungeonPortalEntity(source.getPlayer());
+                    dungeonPortalEntity.getDungeonPlayerUuids().remove(source.getPlayer().getUuid());
+                    if (dungeonPortalEntity.getDungeonPlayerCount() == 0) {
+                        dungeonPortalEntity.setCooldownTime(dungeonPortalEntity.getDungeon().getCooldown() + (int) source.getPlayer().getServerWorld().getTime());
+                    }
+                    dungeonPortalEntity.markDirty();
+                }
                 DungeonHelper.teleportOutOfDungeon(source.getPlayer());
             } else {
                 source.sendFeedback(() -> Text.translatable("text.dungeonz.dungeon_missing"), false);
