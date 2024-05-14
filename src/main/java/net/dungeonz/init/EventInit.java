@@ -1,8 +1,10 @@
 package net.dungeonz.init;
 
 import net.dungeonz.access.ClientPlayerAccess;
+import net.dungeonz.access.ServerPlayerAccess;
 import net.dungeonz.util.DungeonHelper;
 import net.fabricmc.fabric.api.entity.event.v1.EntityElytraEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 
@@ -23,6 +25,12 @@ public class EventInit {
                 }
             }
             return true;
+        });
+        ServerPlayerEvents.COPY_FROM.register((ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) -> {
+            if (((ServerPlayerAccess) oldPlayer).getOldServerWorld() != null) {
+                ((ServerPlayerAccess) newPlayer).setDungeonInfo(((ServerPlayerAccess) oldPlayer).getOldServerWorld(), ((ServerPlayerAccess) oldPlayer).getDungeonPortalBlockPos(),
+                        ((ServerPlayerAccess) oldPlayer).getDungeonSpawnBlockPos());
+            }
         });
     }
 
