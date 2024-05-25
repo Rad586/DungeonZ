@@ -157,23 +157,33 @@ public class DungeonHelper {
                                 return;
                             }
                         }
+                        if (!dungeonPortalEntity.getWaitingUuids().isEmpty() && dungeonPortalEntity.getWaitingUuids().contains(player.getUuid())) {
+                            player.closeHandledScreen();
+                            return;
+                        }
                         if (dungeonPortalEntity.getDungeonPlayerCount() <= 0 && requiredMinGroupUuid != null && dungeonPortalEntity.getMinGroupSize() > 1) {
                             dungeonPortalEntity.addWaitingUuid(requiredMinGroupUuid);
                             if (dungeonPortalEntity.getMinGroupSize() > dungeonPortalEntity.getWaitingUuids().size()) {
                                 player.sendMessage(Text.translatable("text.dungeonz.dungeon_min_group_size", (dungeonPortalEntity.getMinGroupSize() - dungeonPortalEntity.getWaitingUuids().size())),
                                         false);
                                 return;
-                            } else {
-                                for (int i = 0; i < dungeonPortalEntity.getWaitingUuids().size(); i++) {
-                                    if (player.getServerWorld().getPlayerByUuid(dungeonPortalEntity.getWaitingUuids().get(i)) != null) {
-                                        teleportPlayer((ServerPlayerEntity) player.getServerWorld().getPlayerByUuid(dungeonPortalEntity.getWaitingUuids().get(i)), dungeonWorld, dungeonPortalEntity,
-                                                dungeonPortalPos);
-                                    }
-                                }
-                                dungeonPortalEntity.getWaitingUuids().clear();
+                            } else if (dungeonPortalEntity.getdungeonTeleportCountdown() <= 0) {
+                                dungeonPortalEntity.startDungeonTeleportCountdown(dungeonWorld);
+                                player.closeHandledScreen();
                             }
+                        } else if (dungeonPortalEntity.getDungeonPlayerCount() <= 0 && dungeonPortalEntity.getdungeonTeleportCountdown() <= 0) {
+                            dungeonPortalEntity.addWaitingUuid(requiredMinGroupUuid);
+                            dungeonPortalEntity.startDungeonTeleportCountdown(dungeonWorld);
+                            player.closeHandledScreen();
+                        } else if (dungeonPortalEntity.getdungeonTeleportCountdown() > 0) {
+                            dungeonPortalEntity.addWaitingUuid(requiredMinGroupUuid);
+                            player.closeHandledScreen();
+                        } else if (!dungeonPortalEntity.getDeadDungeonPlayerUUIDs().contains(player.getUuid()) || dungeonPortalEntity.getDungeon().isRespawnAllowed()) {
+                            teleportPlayer(player, dungeonWorld, dungeonPortalEntity, dungeonPortalPos);
+                        } else {
+                            player.sendMessage(Text.translatable("text.dungeonz.dead_player"), false);
+                            player.closeHandledScreen();
                         }
-                        teleportPlayer(player, dungeonWorld, dungeonPortalEntity, dungeonPortalPos);
                     } else {
                         player.sendMessage(Text.translatable("text.dungeonz.dungeon_full"), false);
                     }
@@ -184,7 +194,7 @@ public class DungeonHelper {
         }
     }
 
-    private static void teleportPlayer(ServerPlayerEntity serverPlayerEntity, ServerWorld dungeonWorld, DungeonPortalEntity dungeonPortalEntity, BlockPos dungeonPortalPos) {
+    public static void teleportPlayer(ServerPlayerEntity serverPlayerEntity, ServerWorld dungeonWorld, DungeonPortalEntity dungeonPortalEntity, BlockPos dungeonPortalPos) {
         ServerPlayerEntity playerEntity = FabricDimensions.teleport(serverPlayerEntity, dungeonWorld, DungeonPlacementHandler.enter(serverPlayerEntity, dungeonWorld,
                 serverPlayerEntity.getServerWorld(), dungeonPortalEntity, dungeonPortalPos, dungeonPortalEntity.getDifficulty(), dungeonPortalEntity.getDisableEffects()));
 

@@ -29,7 +29,8 @@
   "client": [
     "client.MinecraftClientMixin",
     "client.IntegratedServerLoaderMixin",
-    "client.ClientPlayerEntityMixin"
+    "client.ClientPlayerEntityMixin",
+    "client.InGameHudMixin"
   ],
   "injectors": {
     "defaultRequire": 1

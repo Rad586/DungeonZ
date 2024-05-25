@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import java.util.Map.Entry;
+import java.util.Optional;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -23,11 +23,13 @@ import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.Entity.RemovalReason;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
@@ -36,6 +38,7 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ChunkTicketType;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.PoolStructurePiece;
 import net.minecraft.structure.StructurePiece;
@@ -48,12 +51,12 @@ import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.TeleportTarget;
-import net.minecraft.world.World;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.structure.Structure;
@@ -86,19 +89,9 @@ public class DungeonPlacementHandler {
             serverPlayerEntity.clearStatusEffects();
         }
 
-        BlockPos newPos = new BlockPos(0, 0, 0).add(portalPos.getX() * 16, 100, portalPos.getZ() * 16);
-
-        if (!portalEntity.isDungeonStructureGenerated()) {
-            portalEntity.setDungeonStructureGenerated();
-            spawnDungeonStructure(dungeonWorld, newPos, portalEntity);
-        }
-        Dungeon dungeon = portalEntity.getDungeon();
-        if (portalEntity.getDungeonPlayerCount() == 0) {
-            refreshDungeon(serverPlayerEntity.server, dungeonWorld, portalEntity, dungeon, difficulty, disableEffects);
-        }
         portalEntity.joinDungeon(serverPlayerEntity.getUuid());
 
-        return new TeleportTarget(Vec3d.of(newPos).add(0.5, 0, 0.5), Vec3d.ZERO, 0, 0);
+        return new TeleportTarget(Vec3d.of(new BlockPos(0, 0, 0).add(portalPos.getX() * 16, 100, portalPos.getZ() * 16)).add(0.5, 0, 0.5), Vec3d.ZERO, 0, 0);
     }
 
     public static TeleportTarget leave(ServerPlayerEntity serverPlayerEntity, ServerWorld serverWorld) {
@@ -108,13 +101,11 @@ public class DungeonPlacementHandler {
         return new TeleportTarget(Vec3d.of(((ServerPlayerAccess) serverPlayerEntity).getDungeonSpawnBlockPos()).add(0.5, 0, 0.5), Vec3d.ZERO, serverWorld.random.nextFloat() * 360F, 0);
     }
 
-    private static void spawnDungeonStructure(World world, BlockPos pos, DungeonPortalEntity portalEntity) {
+    public static void generateDungeonStructure(ServerWorld world, BlockPos pos, DungeonPortalEntity portalEntity) {
         Registry<StructurePool> registry = world.getRegistryManager().get(RegistryKeys.TEMPLATE_POOL);
 
-        // has to be the template_pool name
         RegistryEntry<StructurePool> registryEntry = registry.entryOf(RegistryKey.of(RegistryKeys.TEMPLATE_POOL, portalEntity.getDungeon().getStructurePoolId()));
-        // has to be the first jigsaw block to generate of
-        generate((ServerWorld) world, portalEntity, portalEntity.getDungeon(), registryEntry, new Identifier("dungeonz:spawn"), 64, pos, false);
+        generate(world, portalEntity, portalEntity.getDungeon(), registryEntry, new Identifier("dungeonz:spawn"), 64, pos, false);
     }
 
     private static boolean generate(ServerWorld world, DungeonPortalEntity portalEntity, Dungeon dungeon, RegistryEntry<StructurePool> structurePool, Identifier id, int size, BlockPos pos,
@@ -196,42 +187,92 @@ public class DungeonPlacementHandler {
         return false;
     }
 
-    private static void refreshDungeon(MinecraftServer server, ServerWorld world, DungeonPortalEntity portalEntity, Dungeon dungeon, String difficulty, boolean luck) {
-        // Remove mobs and items
+    public static void prepareDungeon(ServerWorld dungeonWorld, DungeonPortalEntity portalEntity) {
+        List<ChunkPos> chunkPosList = new ArrayList<ChunkPos>();
         for (int i = 0; i < portalEntity.getDungeonEdgeList().size() / 6; i++) {
-            List<Entity> entities = world.getOtherEntities(null,
-                    new Box(portalEntity.getDungeonEdgeList().get(6 * i), portalEntity.getDungeonEdgeList().get(1 + 6 * i), portalEntity.getDungeonEdgeList().get(2 + 6 * i),
-                            portalEntity.getDungeonEdgeList().get(3 + 6 * i), portalEntity.getDungeonEdgeList().get(4 + 6 * i), portalEntity.getDungeonEdgeList().get(5 + 6 * i)));
-            for (int u = 0; u < entities.size(); u++) {
-                // if (entities.get(u) instanceof LivingEntity || entities.get(u) instanceof ItemEntity || entities.get(u) instanceof ProjectileEntity) {
-                entities.get(u).remove(RemovalReason.DISCARDED);
-                // }
+            int x1 = portalEntity.getDungeonEdgeList().get(6 * i);
+            int z1 = portalEntity.getDungeonEdgeList().get(2 + 6 * i);
+
+            int x2 = portalEntity.getDungeonEdgeList().get(3 + 6 * i);
+            int z2 = portalEntity.getDungeonEdgeList().get(5 + 6 * i);
+
+            int xCount = Math.abs(x1 - x2) / 16 + ((x1 - x2) % 16 == 0 ? 0 : 1);
+            int zCount = Math.abs(z1 - z2) / 16 + ((z1 - z2) % 16 == 0 ? 0 : 1);
+            for (int u = 0; u < xCount; u++) {
+                for (int o = 0; o < zCount; o++) {
+                    ChunkPos chunkPos = new ChunkPos(ChunkSectionPos.getSectionCoord(x1 + 16 * u), ChunkSectionPos.getSectionCoord(z1 + 16 * o));
+                    if (!chunkPosList.contains(chunkPos)) {
+                        chunkPosList.add(chunkPos);
+                    }
+                }
             }
         }
+        for (int i = 0; i < chunkPosList.size(); i++) {
+            dungeonWorld.getChunkManager().addTicket(ChunkTicketType.PORTAL, chunkPosList.get(i), 1, chunkPosList.get(i).getStartPos());
+        }
+    }
+
+    public static void refreshDungeon(MinecraftServer server, ServerWorld world, DungeonPortalEntity portalEntity, Dungeon dungeon, String difficulty, boolean luck) {
+
+        // Could be tested with create = true
+        // world.getChunkManager().threadedAnvilChunkStorage.getChunk(holder, requiredStatus).thenApply(either -> {
+        // // This block will be executed when the CompletableFuture completes
+        // // either contains the result of the getChunk method
+        // return either.map(chunk -> {
+        // // Do something with the Chunk
+        // System.out.println("Got chunk: " + chunk);
+        // return chunk;
+        // }, unloaded -> {
+        // // Handle the Unloaded case
+        // System.out.println("Chunk is unloaded");
+        // return null;
+        // });
+        // }).thenAccept(result -> {
+        // // This block will be executed after the thenApply block
+        // System.out.println("Completed processing of chunk");
+        // });
+
         // Refresh mobs
+        for (int u = 0; u < portalEntity.getDungeonEdgeList().size() / 6; u++) {
+            List<Entity> entities = world.getOtherEntities(null,
+                    new Box(portalEntity.getDungeonEdgeList().get(6 * u), portalEntity.getDungeonEdgeList().get(1 + 6 * u), portalEntity.getDungeonEdgeList().get(2 + 6 * u),
+                            portalEntity.getDungeonEdgeList().get(3 + 6 * u), portalEntity.getDungeonEdgeList().get(4 + 6 * u), portalEntity.getDungeonEdgeList().get(5 + 6 * u)));
+
+            for (int i = 0; i < entities.size(); i++) {
+                if (!(entities.get(i) instanceof ServerPlayerEntity)
+                        && (entities.get(i) instanceof LivingEntity || entities.get(i) instanceof ItemEntity || entities.get(i) instanceof ProjectileEntity)) {
+                    entities.get(i).discard();
+                }
+            }
+        }
         portalEntity.setDifficulty(difficulty);
-        portalEntity.getBlockMap().forEach((blockId, list) -> {
-            for (int i = 0; i < list.size(); i++) {
-                if (dungeon.getBlockIdBlockReplacementMap().get(blockId) != -1) {
-                    if (dungeon.getBlockIdBlockReplacementMap().get(blockId) == 0) {
-                        world.removeBlock(list.get(i), false);
+
+        Iterator<Entry<Integer, ArrayList<BlockPos>>> iterator = portalEntity.getBlockMap().entrySet().iterator();
+        while (iterator.hasNext()) {
+            Entry<Integer, ArrayList<BlockPos>> entry = iterator.next();
+            for (int i = 0; i < entry.getValue().size(); i++) {
+                if (dungeon.getBlockIdBlockReplacementMap().get(entry.getKey()) != -1) {
+                    if (dungeon.getBlockIdBlockReplacementMap().get(entry.getKey()) == 0) {
+                        world.removeBlock(entry.getValue().get(i), false);
                     } else {
-                        world.setBlockState(list.get(i), Registries.BLOCK.get(dungeon.getBlockIdBlockReplacementMap().get(blockId)).getDefaultState(), 3);
+                        world.setBlockState(entry.getValue().get(i), Registries.BLOCK.get(dungeon.getBlockIdBlockReplacementMap().get(entry.getKey())).getDefaultState(), 3);
                     }
                 }
                 // dungeon.getBlockIdEntitySpawnChanceMap().containsKey(blockId) &&
-                if (world.getRandom().nextFloat() <= dungeon.getBlockIdEntitySpawnChanceMap().get(blockId).get(difficulty)) {
-                    MobEntity mobEntity = createMob(world, dungeon.getBlockIdEntityMap().get(blockId).get(world.getRandom().nextInt(dungeon.getBlockIdEntityMap().get(blockId).size())), null);
+                if (world.getRandom().nextFloat() <= dungeon.getBlockIdEntitySpawnChanceMap().get(entry.getKey()).get(difficulty)) {
+                    MobEntity mobEntity = createMob(world, dungeon.getBlockIdEntityMap().get(entry.getKey()).get(world.getRandom().nextInt(dungeon.getBlockIdEntityMap().get(entry.getKey()).size())),
+                            null);
                     // hopefully initialize doesn't lead to problems
-                    mobEntity.initialize(world, world.getLocalDifficulty(list.get(i)), SpawnReason.STRUCTURE, null, null);
+                    mobEntity.initialize(world, world.getLocalDifficulty(entry.getValue().get(i)), SpawnReason.STRUCTURE, null, null);
                     mobEntity.setPersistent();
                     strengthenMob(mobEntity, dungeon, difficulty, false);
-                    dungeon.getBlockIdBlockReplacementMap().get(blockId);
-                    mobEntity.refreshPositionAndAngles(list.get(i), 360f * world.getRandom().nextFloat(), 0.0f);
+                    dungeon.getBlockIdBlockReplacementMap().get(entry.getKey());
+                    mobEntity.refreshPositionAndAngles(entry.getValue().get(i), 360f * world.getRandom().nextFloat(), 0.0f);
                     world.spawnEntity(mobEntity);
                 }
             }
-        });
+        }
+
         // Refresh boss
         MobEntity bossEntity = createMob(world, dungeon.getBossEntityType(), dungeon.getBossNbtCompound());
         bossEntity.initialize(world, world.getLocalDifficulty(portalEntity.getBossBlockPos()), SpawnReason.STRUCTURE, null, null);

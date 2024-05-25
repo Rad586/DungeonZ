@@ -33,6 +33,7 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity implements Se
 
     private BlockPos dungeonPortalBlockPos = new BlockPos(0, 0, 0);
     private BlockPos dungeonSpawnBlockPos = new BlockPos(0, 0, 0);
+    @Nullable
     private ServerWorld oldWorld = null;
 
     public ServerPlayerEntityMixin(World world, BlockPos pos, float yaw, GameProfile gameProfile) {

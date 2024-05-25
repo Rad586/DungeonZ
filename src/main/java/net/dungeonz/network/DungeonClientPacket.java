@@ -8,12 +8,14 @@ import org.jetbrains.annotations.Nullable;
 
 import io.netty.buffer.Unpooled;
 import net.dungeonz.access.ClientPlayerAccess;
+import net.dungeonz.access.InGameHudAccess;
 import net.dungeonz.block.entity.DungeonGateEntity;
 import net.dungeonz.block.entity.DungeonPortalEntity;
 import net.dungeonz.block.screen.DungeonGateOpScreen;
 import net.dungeonz.block.screen.DungeonPortalOpScreen;
 import net.dungeonz.block.screen.DungeonPortalScreen;
 import net.dungeonz.block.screen.DungeonPortalScreenHandler;
+import net.dungeonz.init.SoundInit;
 import net.dungeonz.item.screen.DungeonCompassScreen;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -111,7 +113,13 @@ public class DungeonClientPacket {
                 }
             });
         });
-
+        ClientPlayNetworking.registerGlobalReceiver(DungeonServerPacket.DUNGEON_TELEPORT_COUNTDOWN_PACKET, (client, handler, buf, sender) -> {
+            int dungeonTeleportCountdown = buf.readInt();
+            client.execute(() -> {
+                ((InGameHudAccess) client.inGameHud).setDungeonCountdownTicks(dungeonTeleportCountdown);
+                client.player.playSound(SoundInit.DUNGEON_COUNTDOWN_EVENT, 1.0f, 1.0f);
+            });
+        });
     }
 
     public static void writeC2SChangeDifficultyPacket(MinecraftClient client, BlockPos portalBlockPos) {

@@ -1,6 +1,6 @@
 ### Added:
-- Added respawn option
+- Added dungeon join countdown
 ### Fixed:
-- Fixed dungeon on /leave
+- Fixed dungeon mob spawn
 ### Changed:
 - 

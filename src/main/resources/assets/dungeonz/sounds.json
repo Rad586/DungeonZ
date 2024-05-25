@@ -8,5 +8,10 @@
     "sounds": [
       "dungeonz:dungeon_gate_unlock"
     ]
+  },
+  "dungeon_countdown": {
+    "sounds": [
+      "dungeonz:dungeon_countdown"
+    ]
   }
 }

@@ -30,6 +30,7 @@ public class DungeonServerPacket {
     public static final Identifier DUNGEON_INFO_PACKET = new Identifier("dungeonz", "dungeon_info");
 
     public static final Identifier DUNGEON_TELEPORT_PACKET = new Identifier("dungeonz", "dungeon_teleport");
+    public static final Identifier DUNGEON_TELEPORT_COUNTDOWN_PACKET = new Identifier("dungeonz", "dungeon_teleport_countdown");
 
     public static final Identifier CHANGE_DUNGEON_DIFFICULTY_PACKET = new Identifier("dungeonz", "change_dungeon_difficulty");
     public static final Identifier CHANGE_DUNGEON_EFFECTS_PACKET = new Identifier("dungeonz", "change_dungeon_effects");
@@ -227,6 +228,13 @@ public class DungeonServerPacket {
         buf.writeString(dungeonGateEntity.getUnlockItem() != null ? Registries.ITEM.getId(dungeonGateEntity.getUnlockItem()).toString() : "");
 
         CustomPayloadS2CPacket packet = new CustomPayloadS2CPacket(SYNC_GATE_BLOCK_PACKET, buf);
+        serverPlayerEntity.networkHandler.sendPacket(packet);
+    }
+
+    public static void writeS2CDungeonTeleportCountdown(ServerPlayerEntity serverPlayerEntity, int countdownTicks) {
+        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+        buf.writeInt(countdownTicks);
+        CustomPayloadS2CPacket packet = new CustomPayloadS2CPacket(DUNGEON_TELEPORT_COUNTDOWN_PACKET, buf);
         serverPlayerEntity.networkHandler.sendPacket(packet);
     }
 

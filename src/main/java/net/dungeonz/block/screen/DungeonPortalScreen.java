@@ -127,7 +127,9 @@ public class DungeonPortalScreen extends HandledScreen<DungeonPortalScreenHandle
         } else {
             this.difficultyButton.setText(Text.translatable("dungeonz.difficulty." + this.handler.getDifficulties().get(0)));
         }
-
+        if (this.handler.getDungeonPortalEntity().isOnCooldown((int) this.client.world.getTime())) {
+            this.dungeonButton.active = false;
+        }
     }
 
     private Text getPlayerName(UUID playerId, int length, int substringLength) {

@@ -12,9 +12,13 @@ import org.jetbrains.annotations.Nullable;
 
 import net.dungeonz.block.screen.DungeonPortalScreenHandler;
 import net.dungeonz.dungeon.Dungeon;
+import net.dungeonz.dungeon.DungeonPlacementHandler;
 import net.dungeonz.init.BlockInit;
+import net.dungeonz.init.ConfigInit;
 import net.dungeonz.init.CriteriaInit;
+import net.dungeonz.init.DimensionInit;
 import net.dungeonz.init.SoundInit;
+import net.dungeonz.network.DungeonServerPacket;
 import net.dungeonz.util.DungeonHelper;
 import net.dungeonz.util.InventoryHelper;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
@@ -64,6 +68,7 @@ public class DungeonPortalEntity extends EndPortalBlockEntity implements Extende
     private HashMap<BlockPos, Integer> spawnerPosEntityIdMap = new HashMap<BlockPos, Integer>();
     private HashMap<BlockPos, Integer> replacePosBlockIdMap = new HashMap<BlockPos, Integer>();
     private List<Integer> dungeonEdgeList = new ArrayList<Integer>();
+    private int dungeonTeleportCountdown = 0;
 
     public DungeonPortalEntity(BlockPos pos, BlockState state) {
         super(BlockInit.DUNGEON_PORTAL_ENTITY, pos, state);
@@ -94,7 +99,7 @@ public class DungeonPortalEntity extends EndPortalBlockEntity implements Extende
             for (int i = 0; i < nbt.getInt("BlockMapSize"); i++) {
                 ArrayList<BlockPos> posList = new ArrayList<>();
                 for (int u = 0; u < nbt.getInt("BlockListSize" + i); u++) {
-                    posList.add(new BlockPos(nbt.getInt("BlockPosX" + u), nbt.getInt("BlockPosY" + u), nbt.getInt("BlockPosZ" + u)));
+                    posList.add(new BlockPos(nbt.getInt("BlockPosX" + i + "" + u), nbt.getInt("BlockPosY" + i + "" + u), nbt.getInt("BlockPosZ" + i + "" + u)));
                 }
                 this.blockBlockPosMap.put(nbt.getInt("BlockId" + i), posList);
             }
@@ -178,9 +183,9 @@ public class DungeonPortalEntity extends EndPortalBlockEntity implements Extende
                 nbt.putInt("BlockId" + blockCount, entry.getKey());
                 nbt.putInt("BlockListSize" + blockCount, entry.getValue().size());
                 for (int i = 0; i < entry.getValue().size(); i++) {
-                    nbt.putInt("BlockPosX" + blockCount, entry.getValue().get(i).getX());
-                    nbt.putInt("BlockPosY" + blockCount, entry.getValue().get(i).getY());
-                    nbt.putInt("BlockPosZ" + blockCount, entry.getValue().get(i).getZ());
+                    nbt.putInt("BlockPosX" + blockCount + "" + i, entry.getValue().get(i).getX());
+                    nbt.putInt("BlockPosY" + blockCount + "" + i, entry.getValue().get(i).getY());
+                    nbt.putInt("BlockPosZ" + blockCount + "" + i, entry.getValue().get(i).getZ());
                 }
                 blockCount++;
             }
@@ -283,6 +288,33 @@ public class DungeonPortalEntity extends EndPortalBlockEntity implements Extende
             }
         } else if (blockEntity.autoKickTime != 0) {
             blockEntity.autoKickTime = 0;
+        }
+        if (blockEntity.dungeonTeleportCountdown >= 1) {
+            if (blockEntity.dungeonTeleportCountdown % 20 == 0) {
+                for (int i = 0; i < blockEntity.getWaitingUuids().size(); i++) {
+                    if (((ServerWorld) blockEntity.getWorld()).getEntity(blockEntity.getWaitingUuids().get(i)) != null
+                            && ((ServerWorld) blockEntity.getWorld()).getEntity(blockEntity.getWaitingUuids().get(i)) instanceof ServerPlayerEntity serverPlayerEntity) {
+                        DungeonServerPacket.writeS2CDungeonTeleportCountdown(serverPlayerEntity, blockEntity.dungeonTeleportCountdown);
+                    }
+                }
+
+            }
+            blockEntity.dungeonTeleportCountdown--;
+
+            if (blockEntity.dungeonTeleportCountdown == (ConfigInit.CONFIG.defaultDungeonTeleportCountdown / 2)) {
+                DungeonPlacementHandler.refreshDungeon(((ServerWorld) blockEntity.getWorld()).getServer(), blockEntity.getWorld().getServer().getWorld(DimensionInit.DUNGEON_WORLD), blockEntity,
+                        blockEntity.getDungeon(), blockEntity.getDifficulty(), blockEntity.getDisableEffects());
+            }
+
+            if (blockEntity.dungeonTeleportCountdown == 0) {
+                for (int i = 0; i < blockEntity.getWaitingUuids().size(); i++) {
+                    if (((ServerWorld) blockEntity.getWorld()).getEntity(blockEntity.getWaitingUuids().get(i)) != null
+                            && ((ServerWorld) blockEntity.getWorld()).getEntity(blockEntity.getWaitingUuids().get(i)) instanceof ServerPlayerEntity serverPlayerEntity) {
+                        DungeonHelper.teleportPlayer(serverPlayerEntity, blockEntity.getWorld().getServer().getWorld(DimensionInit.DUNGEON_WORLD), blockEntity, blockEntity.getPos());
+                    }
+                }
+                blockEntity.getWaitingUuids().clear();
+            }
         }
     }
 
@@ -578,6 +610,23 @@ public class DungeonPortalEntity extends EndPortalBlockEntity implements Extende
 
     public HashMap<BlockPos, Integer> getReplaceBlockIdMap() {
         return this.replacePosBlockIdMap;
+    }
+
+    public void startDungeonTeleportCountdown(ServerWorld dungeonWorld) {
+        this.dungeonTeleportCountdown = ConfigInit.CONFIG.defaultDungeonTeleportCountdown;
+
+        boolean isDungeonStructureGenerated = this.isDungeonStructureGenerated();
+        if (!isDungeonStructureGenerated) {
+            this.setDungeonStructureGenerated();
+            DungeonPlacementHandler.generateDungeonStructure(dungeonWorld, new BlockPos(0, 0, 0).add(this.getPos().getX() * 16, 100, this.getPos().getZ() * 16), this);
+        } else {
+            DungeonPlacementHandler.prepareDungeon(dungeonWorld, this);
+        }
+        this.markDirty();
+    }
+
+    public int getdungeonTeleportCountdown() {
+        return this.dungeonTeleportCountdown;
     }
 
 }

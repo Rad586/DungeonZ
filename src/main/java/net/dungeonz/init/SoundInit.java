@@ -9,6 +9,7 @@ public class SoundInit {
 
     public static SoundEvent DUNGEON_COMPLETION_EVENT = register("dungeonz:dungeon_completion");
     public static SoundEvent DUNGEON_GATE_UNLOCK_EVENT = register("dungeonz:dungeon_gate_unlock");
+    public static SoundEvent DUNGEON_COUNTDOWN_EVENT = register("dungeonz:dungeon_countdown");
 
     private static SoundEvent register(String id) {
         return Registry.register(Registries.SOUND_EVENT, id, SoundEvent.of(new Identifier(id)));
