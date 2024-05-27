@@ -95,6 +95,9 @@ public class DungeonHelper {
             List<ItemStack> itemStacks = new ArrayList<ItemStack>();
             for (int i = 0; i < inventory.size(); i++) {
                 if (!inventory.getStack(i).isEmpty()) {
+                    if (inventory.getStack(i).isDamaged()) {
+                        inventory.getStack(i).setDamage(0);
+                    }
                     boolean contains = false;
                     for (int u = 0; u < itemStacks.size(); u++) {
                         if (ItemStack.areItemsEqual(itemStacks.get(u), inventory.getStack(i))) {
