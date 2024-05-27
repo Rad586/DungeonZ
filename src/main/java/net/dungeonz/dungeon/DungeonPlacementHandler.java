@@ -152,7 +152,8 @@ public class DungeonPlacementHandler {
                                     }
                                 } else if (dungeon.getBossBlockId() == blockId) {
                                     portalEntity.setBossBlockPos(checkPos);
-                                } else if (world.getBlockState(checkPos).isOf(Blocks.CHEST) || world.getBlockState(checkPos).isOf(Blocks.BARREL)) {
+                                } else if (world.getBlockState(checkPos).isOf(Blocks.CHEST) || world.getBlockState(checkPos).isOf(Blocks.BARREL)
+                                        || world.getBlockState(checkPos).isOf(Blocks.TRAPPED_CHEST)) {
                                     chestPosList.add(checkPos);
                                 } else if (world.getBlockState(checkPos).isOf(exitBlock)) {
                                     exitPosList.add(checkPos);
