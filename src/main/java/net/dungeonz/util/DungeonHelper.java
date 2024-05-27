@@ -48,8 +48,8 @@ public class DungeonHelper {
             if (blockEntity == null) {
                 return null;
             }
-            if (blockEntity instanceof DungeonPortalEntity) {
-                return ((DungeonPortalEntity) blockEntity).getDungeon();
+            if (blockEntity instanceof DungeonPortalEntity dungeonPortalEntity) {
+                return dungeonPortalEntity.getDungeon();
             }
         }
         return null;
@@ -62,8 +62,8 @@ public class DungeonHelper {
             if (blockEntity == null) {
                 return null;
             }
-            if (blockEntity instanceof DungeonPortalEntity) {
-                return (DungeonPortalEntity) blockEntity;
+            if (blockEntity instanceof DungeonPortalEntity dungeonPortalEntity) {
+                return dungeonPortalEntity;
             }
         }
         return null;
@@ -115,8 +115,7 @@ public class DungeonHelper {
     }
 
     public static void teleportDungeon(ServerPlayerEntity player, BlockPos dungeonPortalPos, @Nullable UUID requiredMinGroupUuid) {
-        if (player.getWorld().getBlockEntity(dungeonPortalPos) != null && player.getWorld().getBlockEntity(dungeonPortalPos) instanceof DungeonPortalEntity) {
-            DungeonPortalEntity dungeonPortalEntity = (DungeonPortalEntity) player.getWorld().getBlockEntity(dungeonPortalPos);
+        if (player.getWorld().getBlockEntity(dungeonPortalPos) != null && player.getWorld().getBlockEntity(dungeonPortalPos) instanceof DungeonPortalEntity dungeonPortalEntity) {
 
             if (player.getWorld().getRegistryKey() == DimensionInit.DUNGEON_WORLD) {
                 ServerWorld oldWorld = ((ServerPlayerAccess) player).getOldServerWorld();
