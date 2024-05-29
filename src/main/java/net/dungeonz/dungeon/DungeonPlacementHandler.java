@@ -20,7 +20,9 @@ import net.dungeonz.init.BlockInit;
 import net.dungeonz.init.TagInit;
 import net.dungeonz.util.InventoryHelper;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.FallingBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ItemEntity;
@@ -140,8 +142,9 @@ public class DungeonPlacementHandler {
                     for (int u = poolStructurePiece.getBoundingBox().getMinY(); u <= poolStructurePiece.getBoundingBox().getMaxY(); u++) {
                         for (int o = poolStructurePiece.getBoundingBox().getMinZ(); o <= poolStructurePiece.getBoundingBox().getMaxZ(); o++) {
                             BlockPos checkPos = new BlockPos(i, u, o);
-                            if (!world.getBlockState(checkPos).isAir()) {
-                                int blockId = Registries.BLOCK.getRawId(world.getBlockState(checkPos).getBlock());
+                            BlockState state = world.getBlockState(checkPos);
+                            if (!state.isAir()) {
+                                int blockId = Registries.BLOCK.getRawId(state.getBlock());
                                 if (dungeon.containsBlockId(blockId)) {
                                     if (!blockIdPosMap.containsKey(blockId)) {
                                         ArrayList<BlockPos> newList = new ArrayList<BlockPos>();
@@ -152,16 +155,15 @@ public class DungeonPlacementHandler {
                                     }
                                 } else if (dungeon.getBossBlockId() == blockId) {
                                     portalEntity.setBossBlockPos(checkPos);
-                                } else if (world.getBlockState(checkPos).isOf(Blocks.CHEST) || world.getBlockState(checkPos).isOf(Blocks.BARREL)
-                                        || world.getBlockState(checkPos).isOf(Blocks.TRAPPED_CHEST)) {
+                                } else if (state.isOf(Blocks.CHEST) || state.isOf(Blocks.BARREL) || state.isOf(Blocks.TRAPPED_CHEST)) {
                                     chestPosList.add(checkPos);
-                                } else if (world.getBlockState(checkPos).isOf(exitBlock)) {
+                                } else if (state.isOf(exitBlock)) {
                                     exitPosList.add(checkPos);
-                                } else if (world.getBlockState(checkPos).isOf(bossLootBlock)) {
+                                } else if (state.isOf(bossLootBlock)) {
                                     portalEntity.setBossLootBlockPos(checkPos);
-                                } else if (world.getBlockState(checkPos).isOf(BlockInit.DUNGEON_SPAWNER)) {
+                                } else if (state.isOf(BlockInit.DUNGEON_SPAWNER)) {
                                     spawnerPosEntityIdMap.put(checkPos, ((DungeonSpawnerEntity) world.getBlockEntity(checkPos)).getLogic().getEntityId());
-                                } else if (world.getBlockState(checkPos).isOf(BlockInit.DUNGEON_GATE)) {
+                                } else if (state.isOf(BlockInit.DUNGEON_GATE)) {
                                     gatePosList.add(checkPos);
                                     if (world.getBlockEntity(checkPos) != null && ((DungeonGateEntity) world.getBlockEntity(checkPos)).getUnlockItem() == null) {
                                         DungeonGateEntity dungeonGateEntity = (DungeonGateEntity) world.getBlockEntity(checkPos);
@@ -171,6 +173,8 @@ public class DungeonPlacementHandler {
                                                 poolStructurePiece.getBoundingBox().getMaxZ());
                                         dungeonGateEntity.markDirty();
                                     }
+                                } else if (state.getBlock() instanceof FallingBlock fallingBlock) {
+
                                 }
                             }
                         }
