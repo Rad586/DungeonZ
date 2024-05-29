@@ -189,7 +189,7 @@ public class Dungeon {
     }
 
     public static void addDungeon(Dungeon dungeon) {
-        if (!DungeonzMain.DUNGEONS.contains(dungeon)) {
+        if (!DungeonzMain.DUNGEONS.stream().anyMatch(d -> d.getDungeonTypeId().equals(dungeon.getDungeonTypeId()))) {
             DungeonzMain.DUNGEONS.add(dungeon);
         }
     }
