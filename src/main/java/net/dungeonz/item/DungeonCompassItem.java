@@ -35,7 +35,7 @@ public class DungeonCompassItem extends Item implements Vanishable {
 
     @Override
     public void inventoryTick(ItemStack stack, World world, Entity entity, int slot, boolean selected) {
-        if (world.isClient) {
+        if (world.isClient()) {
             return;
         }
         if (hasDungeon(stack) && world.getTime() % 100 == 0 && !hasDungeonStructure(stack)) {
@@ -49,11 +49,11 @@ public class DungeonCompassItem extends Item implements Vanishable {
         World world = context.getWorld();
 
         if (world.getBlockState(blockPos).isOf(Blocks.CARTOGRAPHY_TABLE)) {
-            if (!world.isClient) {
+            if (!world.isClient()) {
                 DungeonServerPacket.writeS2COpenCompassScreenPacket((ServerPlayerEntity) context.getPlayer(),
                         context.getStack().getNbt() != null ? context.getStack().getNbt().getString(DUNGEON_TYPE_KEY) : "");
             }
-            return ActionResult.success(world.isClient);
+            return ActionResult.success(world.isClient());
         }
         return super.useOnBlock(context);
     }
