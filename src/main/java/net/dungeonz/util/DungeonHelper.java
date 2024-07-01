@@ -43,7 +43,7 @@ public class DungeonHelper {
 
     @Nullable
     public static Dungeon getCurrentDungeon(ServerPlayerEntity playerEntity) {
-        if (playerEntity.getWorld().getRegistryKey() == DimensionInit.DUNGEON_WORLD && ((ServerPlayerAccess) playerEntity).getOldServerWorld() != null) {
+        if (playerEntity != null && playerEntity.getWorld().getRegistryKey() == DimensionInit.DUNGEON_WORLD && ((ServerPlayerAccess) playerEntity).getOldServerWorld() != null) {
             BlockEntity blockEntity = ((ServerPlayerAccess) playerEntity).getOldServerWorld().getBlockEntity(((ServerPlayerAccess) playerEntity).getDungeonPortalBlockPos());
             if (blockEntity == null) {
                 return null;
