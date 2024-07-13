@@ -15,8 +15,12 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
-@SuppressWarnings("deprecation")
+import com.mojang.serialization.MapCodec;
+
 public class DungeonSpawnerBlock extends BlockWithEntity {
+
+    public static final MapCodec<DungeonSpawnerBlock> CODEC = DungeonSpawnerBlock.createCodec(DungeonSpawnerBlock::new);
+
     public DungeonSpawnerBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
@@ -29,7 +33,7 @@ public class DungeonSpawnerBlock extends BlockWithEntity {
     @Override
     @Nullable
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
-        return DungeonSpawnerBlock.checkType(type, BlockInit.DUNGEON_SPAWNER_ENTITY, world.isClient ? DungeonSpawnerEntity::clientTick : DungeonSpawnerEntity::serverTick);
+        return DungeonSpawnerBlock.validateTicker(type, BlockInit.DUNGEON_SPAWNER_ENTITY, world.isClient ? DungeonSpawnerEntity::clientTick : DungeonSpawnerEntity::serverTick);
     }
 
     @Override
@@ -44,5 +48,10 @@ public class DungeonSpawnerBlock extends BlockWithEntity {
     @Override
     public BlockRenderType getRenderType(BlockState state) {
         return BlockRenderType.MODEL;
+    }
+
+    @Override
+    protected MapCodec<? extends BlockWithEntity> getCodec() {
+        return CODEC;
     }
 }

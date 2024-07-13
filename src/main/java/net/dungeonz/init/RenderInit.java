@@ -30,7 +30,7 @@ public class RenderInit {
 
         HandledScreens.register(BlockInit.PORTAL, DungeonPortalScreen::new);
 
-        ModelPredicateProviderRegistry.register(ItemInit.DUNGEON_COMPASS, new Identifier("angle"), new CompassAnglePredicateProvider((world, stack, entity) -> {
+        ModelPredicateProviderRegistry.register(ItemInit.DUNGEON_COMPASS, Identifier.of("angle"), new CompassAnglePredicateProvider((world, stack, entity) -> {
             return DungeonCompassItem.createGlobalDungeonStructurePos(world, stack);
         }));
         HudRenderCallback.EVENT.register((drawContext, tickDelta) -> {

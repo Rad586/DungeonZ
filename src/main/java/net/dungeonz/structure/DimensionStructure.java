@@ -1,6 +1,7 @@
 package net.dungeonz.structure;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.dungeonz.block.entity.DungeonPortalEntity;
@@ -10,6 +11,7 @@ import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.structure.StructurePiecesList;
 import net.minecraft.structure.pool.StructurePool;
 import net.minecraft.structure.pool.StructurePoolBasedGenerator;
+import net.minecraft.structure.pool.alias.StructurePoolAliasLookup;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
@@ -21,6 +23,7 @@ import net.minecraft.world.gen.HeightContext;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.heightprovider.HeightProvider;
+import net.minecraft.world.gen.structure.JigsawStructure;
 import net.minecraft.world.gen.structure.Structure;
 import net.minecraft.world.gen.structure.StructureType;
 
@@ -32,14 +35,13 @@ public class DimensionStructure extends Structure {
 
     // A custom codec that changes the size limit for our code_structure_sky_fan.json's config to not be capped at 7.
     // With this, we can have a structure with a size limit up to 30 if we want to have extremely long branches of pieces in the structure.
-    public static final Codec<DimensionStructure> CODEC = RecordCodecBuilder.<DimensionStructure>mapCodec(
+    public static final MapCodec<DimensionStructure> CODEC = RecordCodecBuilder.<DimensionStructure>mapCodec(
             instance -> instance.group(DimensionStructure.configCodecBuilder(instance), StructurePool.REGISTRY_CODEC.fieldOf("start_pool").forGetter(structure -> structure.startPool),
                     Identifier.CODEC.optionalFieldOf("start_jigsaw_name").forGetter(structure -> structure.startJigsawName),
                     Codec.intRange(0, 30).fieldOf("size").forGetter(structure -> structure.size), HeightProvider.CODEC.fieldOf("start_height").forGetter(structure -> structure.startHeight),
                     Heightmap.Type.CODEC.optionalFieldOf("project_start_to_heightmap").forGetter(structure -> structure.projectStartToHeightmap),
                     Codec.intRange(1, 128).fieldOf("max_distance_from_center").forGetter(structure -> structure.maxDistanceFromCenter),
-                    Codec.STRING.fieldOf("dungeon_type").forGetter(structure -> structure.dungeonType)).apply(instance, DimensionStructure::new))
-            .codec();
+                    Codec.STRING.fieldOf("dungeon_type").forGetter(structure -> structure.dungeonType)).apply(instance, DimensionStructure::new));
 
     private final RegistryEntry<StructurePool> startPool;
     private final Optional<Identifier> startJigsawName;
@@ -78,7 +80,6 @@ public class DimensionStructure extends Structure {
         if (!DimensionStructure.extraSpawningChecks(context)) {
             return Optional.empty();
         }
-        // System.out.println(this.);
         // Set's our spawning blockpos's y offset to be 60 blocks up.
         // Since we are going to have heightmap/terrain height spawning set to true further down, this will make it so we spawn 60 blocks above terrain.
         // If we wanted to spawn on ocean floor, we would set heightmap/terrain height spawning to false and the grab the y value of the terrain with OCEAN_FLOOR_WG heightmap.
@@ -87,6 +88,13 @@ public class DimensionStructure extends Structure {
         // Turns the chunk coordinates into actual coordinates we can use. (Gets corner of that chunk)
         ChunkPos chunkPos = context.chunkPos();
         BlockPos blockPos = new BlockPos(chunkPos.getStartX(), startY, chunkPos.getStartZ());
+
+        // public static Optional<Structure.StructurePosition> generate(Structure.Context context, RegistryEntry<StructurePool> structurePool, Optional<Identifier> id, int size, BlockPos pos, boolean
+        // useExpansionHack, Optional<Heightmap.Type> projectStartToHeightmap, int maxDistanceFromCenter, StructurePoolAliasLookup aliasLookup, DimensionPadding dimensionPadding,
+        // StructureLiquidSettings liquidSettings) {
+
+        // Optional<Structure.StructurePosition> optional = StructurePoolBasedGenerator.generate(context, structurePool, Optional.of(id), size, pos, false, Optional.empty(), 512,
+        // StructurePoolAliasLookup.EMPTY, JigsawStructure.DEFAULT_DIMENSION_PADDING, JigsawStructure.DEFAULT_LIQUID_SETTINGS);
 
         Optional<StructurePosition> structurePiecesGenerator = StructurePoolBasedGenerator.generate(context, // Used for StructurePoolBasedGenerator to get all the proper behaviors done.
                 this.startPool, // The starting pool to use to create the structure layout from
@@ -98,7 +106,8 @@ public class DimensionStructure extends Structure {
                 // Here, blockpos's y value is 60 which means the structure spawn 60 blocks above terrain height.
                 // Set this to false for structure to be place only at the passed in blockpos's Y value instead.
                 // Definitely keep this false when placing structures in the nether as otherwise, heightmap placing will put the structure on the Bedrock roof.
-                this.maxDistanceFromCenter); // Maximum limit for how far pieces can spawn from center. You cannot set this bigger than 128 or else pieces gets cutoff.
+                this.maxDistanceFromCenter, // Maximum limit for how far pieces can spawn from center. You cannot set this bigger than 128 or else pieces gets cutoff.
+                StructurePoolAliasLookup.EMPTY, JigsawStructure.DEFAULT_DIMENSION_PADDING, JigsawStructure.DEFAULT_LIQUID_SETTINGS);
 
         /*
          * Note, you are always free to make your own StructurePoolBasedGenerator class and implementation of how the structure should generate. It is tricky but extremely powerful if you are doing

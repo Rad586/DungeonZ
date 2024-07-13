@@ -4,6 +4,8 @@ import java.util.Iterator;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.mojang.serialization.MapCodec;
+
 import net.dungeonz.DungeonzMain;
 import net.dungeonz.block.entity.DungeonPortalEntity;
 import net.dungeonz.init.BlockInit;
@@ -19,15 +21,15 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.partyaddon.access.GroupManagerAccess;
 import net.partyaddon.network.PartyAddonServerPacket;
 
-@SuppressWarnings("deprecation")
 public class DungeonPortalBlock extends BlockWithEntity {
+
+    public static final MapCodec<DungeonPortalBlock> CODEC = DungeonPortalBlock.createCodec(DungeonPortalBlock::new);
 
     public DungeonPortalBlock(Settings settings) {
         super(settings);
@@ -44,7 +46,7 @@ public class DungeonPortalBlock extends BlockWithEntity {
     }
 
     @Override
-    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         if (player.getWorld().getBlockEntity(pos) != null && player.getWorld().getBlockEntity(pos) instanceof DungeonPortalEntity dungeonPortalEntity) {
 
             if (isOtherDungeonPortalBlockNearby(world, pos)) {
@@ -66,12 +68,12 @@ public class DungeonPortalBlock extends BlockWithEntity {
                 return ActionResult.success(world.isClient());
             }
         }
-        return super.onUse(state, world, pos, player, hand, hit);
+        return super.onUse(state, world, pos, player, hit);
     }
 
     @Override
     public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
-        if (!world.isClient() && !entity.hasVehicle() && !entity.hasPassengers() && entity.canUsePortals() && entity instanceof ServerPlayerEntity) {
+        if (!world.isClient() && !entity.hasVehicle() && !entity.hasPassengers() && entity.canUsePortals(false) && entity instanceof ServerPlayerEntity) {
             if (!entity.hasPortalCooldown()) {
                 if (isOtherDungeonPortalBlockNearby(world, pos)) {
                     pos = getMainDungeonPortalBlockPos(world, pos);
@@ -85,7 +87,7 @@ public class DungeonPortalBlock extends BlockWithEntity {
     @Override
     @Nullable
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
-        return DungeonGateBlock.checkType(type, BlockInit.DUNGEON_PORTAL_ENTITY, world.isClient() ? DungeonPortalEntity::clientTick : DungeonPortalEntity::serverTick);
+        return DungeonGateBlock.validateTicker(type, BlockInit.DUNGEON_PORTAL_ENTITY, world.isClient() ? DungeonPortalEntity::clientTick : DungeonPortalEntity::serverTick);
     }
 
     public static boolean isOtherDungeonPortalBlockNearby(World world, BlockPos pos) {
@@ -135,6 +137,11 @@ public class DungeonPortalBlock extends BlockWithEntity {
             return (DungeonPortalEntity) world.getBlockEntity(getMainDungeonPortalBlockPos(world, pos));
         }
         return null;
+    }
+
+    @Override
+    protected MapCodec<? extends BlockWithEntity> getCodec() {
+        return CODEC;
     }
 
 }

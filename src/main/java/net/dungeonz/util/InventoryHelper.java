@@ -9,6 +9,8 @@ import net.minecraft.loot.LootTable;
 import net.minecraft.loot.context.LootContextParameterSet;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.context.LootContextTypes;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
@@ -21,7 +23,7 @@ public class InventoryHelper {
         // Clear inventory
         ((Inventory) world.getBlockEntity(pos)).clear();
         // Generate loot
-        LootTable lootTable = server.getLootManager().getLootTable(new Identifier(lootTableString));
+        LootTable lootTable = server.getReloadableRegistries().getLootTable(RegistryKey.of(RegistryKeys.LOOT_TABLE, Identifier.of(lootTableString)));
         LootContextParameterSet.Builder builder = new LootContextParameterSet.Builder(world).add(LootContextParameters.ORIGIN, new Vec3d(pos.getX(), pos.getY(), pos.getZ()));
         if (luck) {
             builder.luck(1.1f);

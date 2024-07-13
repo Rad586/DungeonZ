@@ -17,7 +17,6 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.screen.ScreenTexts;
-import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -26,7 +25,7 @@ import net.minecraft.util.math.MathHelper;
 @Environment(EnvType.CLIENT)
 public class DungeonCompassScreen extends Screen {
 
-    private static final Identifier TEXTURE = new Identifier("dungeonz:textures/gui/dungeon_compass.png");
+    private static final Identifier TEXTURE = Identifier.of("dungeonz:textures/gui/dungeon_compass.png");
     private final Text title = Text.translatable("compass.compass_screen.title");
 
     private ButtonWidget doneButton;
@@ -76,18 +75,23 @@ public class DungeonCompassScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context);
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+        super.renderBackground(context, mouseX, mouseY, delta);
 
         int i = (this.width - this.backgroundWidth) / 2;
         int j = (this.height - this.backgroundHeight) / 2;
         context.drawTexture(TEXTURE, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight, 256, 256);
+    }
+
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        super.render(context, mouseX, mouseY, delta);
 
         context.drawText(this.textRenderer, this.title, this.x + this.backgroundWidth / 2 - this.textRenderer.getWidth(this.title) / 2, this.y + 6, 0x404040, false);
 
-        super.render(context, mouseX, mouseY, delta);
-
         if (!this.dungeonIds.isEmpty()) {
+            int i = (this.width - this.backgroundWidth) / 2;
+            int j = (this.height - this.backgroundHeight) / 2;
             int k = this.y + 16 + 1;
             int l = this.x + 5 + 5;
             this.renderScrollbar(context, i, j, this.dungeonIds);
@@ -150,11 +154,11 @@ public class DungeonCompassScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         int i = this.dungeonIds.size();
         if (this.canScroll(i)) {
             int j = i - 7;
-            this.indexStartOffset = MathHelper.clamp((int) ((double) this.indexStartOffset - amount), 0, j);
+            this.indexStartOffset = MathHelper.clamp((int) ((double) this.indexStartOffset - verticalAmount), 0, j);
         }
         return true;
     }
@@ -192,7 +196,7 @@ public class DungeonCompassScreen extends Screen {
 
     private void onDone() {
         this.client.setScreen(null);
-        this.client.player.playSound(SoundEvents.ITEM_LODESTONE_COMPASS_LOCK, SoundCategory.BLOCKS, 1.0f, 1.0f);
+        this.client.player.playSound(SoundEvents.ITEM_LODESTONE_COMPASS_LOCK, 1.0f, 1.0f);
         DungeonClientPacket.writeC2SSetDungeonCompassPacket(this.client, this.dungeonType);
     }
 

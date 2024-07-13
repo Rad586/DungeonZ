@@ -49,7 +49,8 @@ public class DungeonGateOpScreen extends Screen {
                 defaultBlockId = Registries.BLOCK.getId(dungeonGateEntity.getBlockState().getBlock()).toString();
             }
             if (dungeonGateEntity.getParticleEffect() != null) {
-                defaultParticleId = dungeonGateEntity.getParticleEffect().asString();
+
+                defaultParticleId = Registries.PARTICLE_TYPE.getId(dungeonGateEntity.getParticleEffect().getType()).toString();
             }
             if (dungeonGateEntity.getUnlockItem() != null) {
                 defaultItemId = Registries.ITEM.getId(dungeonGateEntity.getUnlockItem()).toString();
@@ -94,28 +95,18 @@ public class DungeonGateOpScreen extends Screen {
     }
 
     @Override
-    public void tick() {
-        this.gateBlockIdTextFieldWidget.tick();
-        this.gateParticleIdTextFieldWidget.tick();
-        this.gateUnlockItemIdTextFieldWidget.tick();
-    }
-
-    @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context);
+        super.render(context, mouseX, mouseY, delta);
         context.drawTextWithShadow(this.textRenderer, GATE_BLOCK_ID_TEXT, this.width / 2 - 153, 40, 0xA0A0A0);
         this.gateBlockIdTextFieldWidget.render(context, mouseX, mouseY, delta);
         context.drawTextWithShadow(this.textRenderer, GATE_PARTICLE_ID_TEXT, this.width / 2 - 153, 75, 0xA0A0A0);
         this.gateParticleIdTextFieldWidget.render(context, mouseX, mouseY, delta);
         context.drawTextWithShadow(this.textRenderer, GATE_UNLOCK_ITEM_ID_TEXT, this.width / 2 - 153, 110, 0xA0A0A0);
         this.gateUnlockItemIdTextFieldWidget.render(context, mouseX, mouseY, delta);
-
-        super.render(context, mouseX, mouseY, delta);
     }
 
     private void updateDoneButtonState() {
-        this.doneButton.active = !StringUtils.isEmpty(this.gateBlockIdTextFieldWidget.getText())
-                && !Registries.BLOCK.get(new Identifier(this.gateBlockIdTextFieldWidget.getText())).equals(Blocks.AIR);
+        this.doneButton.active = !StringUtils.isEmpty(this.gateBlockIdTextFieldWidget.getText()) && !Registries.BLOCK.get(Identifier.of(this.gateBlockIdTextFieldWidget.getText())).equals(Blocks.AIR);
     }
 
     private void onDone() {

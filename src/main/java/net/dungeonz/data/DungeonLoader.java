@@ -30,7 +30,7 @@ public class DungeonLoader implements SimpleSynchronousResourceReloadListener {
 
     @Override
     public Identifier getFabricId() {
-        return new Identifier("dungeonz", "dungeon_loader");
+        return Identifier.of("dungeonz", "dungeon_loader");
     }
 
     @Override
@@ -49,8 +49,8 @@ public class DungeonLoader implements SimpleSynchronousResourceReloadListener {
                 int cooldown = data.get("cooldown").getAsInt();
                 boolean allowElytra = data.has("elytra") ? data.get("elytra").getAsBoolean() : false;
                 boolean allowRespawn = data.has("respawn") ? data.get("respawn").getAsBoolean() : true;
-                Identifier dungeonBackgroundId = new Identifier(data.has("background_texture") ? data.get("background_texture").getAsString() : "");
-                Identifier dungeonStructurePoolId = new Identifier(data.get("dungeon_structure_pool_id").getAsString());
+                Identifier dungeonBackgroundId = Identifier.of(data.has("background_texture") ? data.get("background_texture").getAsString() : "");
+                Identifier dungeonStructurePoolId = Identifier.of(data.get("dungeon_structure_pool_id").getAsString());
 
                 List<String> difficulties = new ArrayList<String>();
                 JsonObject difficultyObject = data.get("difficulty").getAsJsonObject();
@@ -90,22 +90,22 @@ public class DungeonLoader implements SimpleSynchronousResourceReloadListener {
 
                 while (blockIterator.hasNext()) {
                     String block = blockIterator.next();
-                    if (Registries.BLOCK.get(new Identifier(block)).toString().equals("Block{minecraft:air}")) {
+                    if (Registries.BLOCK.get(Identifier.of(block)).toString().equals("Block{minecraft:air}")) {
                         DungeonzMain.LOGGER.warn("{} is not a valid block identifier", block);
                         continue;
                     }
-                    int rawBlockId = Registries.BLOCK.getRawId(Registries.BLOCK.get(new Identifier(block)));
+                    int rawBlockId = Registries.BLOCK.getRawId(Registries.BLOCK.get(Identifier.of(block)));
 
                     JsonObject specificBlockObject = blockObject.get(block).getAsJsonObject();
 
                     if (specificBlockObject.has("spawns")) {
                         List<EntityType<?>> entityTypes = new ArrayList<EntityType<?>>();
                         for (int i = 0; i < specificBlockObject.get("spawns").getAsJsonArray().size(); i++) {
-                            if (!Registries.ENTITY_TYPE.containsId(new Identifier(specificBlockObject.get("spawns").getAsJsonArray().get(i).getAsString()))) {
+                            if (!Registries.ENTITY_TYPE.containsId(Identifier.of(specificBlockObject.get("spawns").getAsJsonArray().get(i).getAsString()))) {
                                 DungeonzMain.LOGGER.warn("{} is not a valid entity identifier", specificBlockObject.get("spawns").getAsJsonArray().get(i).getAsString());
                                 continue;
                             }
-                            entityTypes.add(Registries.ENTITY_TYPE.get(new Identifier(specificBlockObject.get("spawns").getAsJsonArray().get(i).getAsString())));
+                            entityTypes.add(Registries.ENTITY_TYPE.get(Identifier.of(specificBlockObject.get("spawns").getAsJsonArray().get(i).getAsString())));
                         }
                         blockIdEntityMap.put(rawBlockId, entityTypes);
 
@@ -116,10 +116,10 @@ public class DungeonLoader implements SimpleSynchronousResourceReloadListener {
                         blockIdEntitySpawnChance.put(rawBlockId, difficultyChance);
 
                     } else if (specificBlockObject.has("boss_entity")) {
-                        if (!Registries.ENTITY_TYPE.containsId(new Identifier(specificBlockObject.get("boss_entity").getAsString()))) {
+                        if (!Registries.ENTITY_TYPE.containsId(Identifier.of(specificBlockObject.get("boss_entity").getAsString()))) {
                             DungeonzMain.LOGGER.warn("{} is not a valid entity identifier", specificBlockObject.get("boss_entity").getAsString());
                         }
-                        bossEntityType = Registries.ENTITY_TYPE.get(new Identifier(specificBlockObject.get("boss_entity").getAsString()));
+                        bossEntityType = Registries.ENTITY_TYPE.get(Identifier.of(specificBlockObject.get("boss_entity").getAsString()));
                         bossNbtCompound = tryReadNbtData(specificBlockObject);
                         bossBlockId = rawBlockId;
                     } else if (specificBlockObject.has("exit_block") && specificBlockObject.get("exit_block").getAsBoolean()) {
@@ -131,7 +131,7 @@ public class DungeonLoader implements SimpleSynchronousResourceReloadListener {
                     }
 
                     if (!specificBlockObject.get("replace").isJsonNull()) {
-                        Identifier blockIdentifier = new Identifier(specificBlockObject.get("replace").getAsString());
+                        Identifier blockIdentifier = Identifier.of(specificBlockObject.get("replace").getAsString());
                         if (!blockIdentifier.toString().equals("minecraft:air") && Registries.BLOCK.get(blockIdentifier).toString().equals("Block{minecraft:air}")) {
                             DungeonzMain.LOGGER.warn("{} is not a valid block identifier", specificBlockObject.get("replace").getAsString());
                             continue;
@@ -149,7 +149,7 @@ public class DungeonLoader implements SimpleSynchronousResourceReloadListener {
 
                 while (spawnerIterator.hasNext()) {
                     String entityString = spawnerIterator.next();
-                    Identifier entityIdentifier = new Identifier(entityString);
+                    Identifier entityIdentifier = Identifier.of(entityString);
 
                     if (Registries.ENTITY_TYPE.get(entityIdentifier).toString().equals("entity.minecraft.pig")) {
                         DungeonzMain.LOGGER.warn("{} is not a valid entity identifier", entityString);
@@ -160,7 +160,7 @@ public class DungeonLoader implements SimpleSynchronousResourceReloadListener {
                 List<Integer> breakableBlockIds = new ArrayList<Integer>();
                 if (data.has("breakable")) {
                     for (int i = 0; i < data.get("breakable").getAsJsonArray().size(); i++) {
-                        Identifier blockIdentifier = new Identifier(data.get("breakable").getAsJsonArray().get(i).getAsString());
+                        Identifier blockIdentifier = Identifier.of(data.get("breakable").getAsJsonArray().get(i).getAsString());
                         if (Registries.BLOCK.get(blockIdentifier).toString().equals("Block{minecraft:air}")) {
                             DungeonzMain.LOGGER.warn("{} is not a valid block identifier", data.get("breakable").getAsJsonArray().get(i).getAsString());
                             continue;
@@ -171,7 +171,7 @@ public class DungeonLoader implements SimpleSynchronousResourceReloadListener {
                 List<Integer> placeableBlockIds = new ArrayList<Integer>();
                 if (data.has("placeable")) {
                     for (int i = 0; i < data.get("placeable").getAsJsonArray().size(); i++) {
-                        Identifier blockIdentifier = new Identifier(data.get("placeable").getAsJsonArray().get(i).getAsString());
+                        Identifier blockIdentifier = Identifier.of(data.get("placeable").getAsJsonArray().get(i).getAsString());
                         if (Registries.BLOCK.get(blockIdentifier).toString().equals("Block{minecraft:air}")) {
                             DungeonzMain.LOGGER.warn("{} is not a valid block identifier", data.get("placeable").getAsJsonArray().get(i).getAsString());
                             continue;
@@ -187,7 +187,7 @@ public class DungeonLoader implements SimpleSynchronousResourceReloadListener {
 
                 while (requiredIterator.hasNext()) {
                     String itemString = requiredIterator.next();
-                    Identifier itemIdentifier = new Identifier(itemString);
+                    Identifier itemIdentifier = Identifier.of(itemString);
 
                     if (Registries.ITEM.get(itemIdentifier).toString().equals("air")) {
                         DungeonzMain.LOGGER.warn("{} is not a valid item identifier", itemString);

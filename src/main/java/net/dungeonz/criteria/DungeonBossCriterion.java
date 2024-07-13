@@ -1,56 +1,38 @@
 package net.dungeonz.criteria;
 
-import com.google.gson.JsonObject;
+import java.util.Optional;
+
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.advancement.criterion.AbstractCriterion;
-import net.minecraft.advancement.criterion.AbstractCriterionConditions;
-import net.minecraft.predicate.entity.AdvancementEntityPredicateDeserializer;
-import net.minecraft.predicate.entity.AdvancementEntityPredicateSerializer;
+import net.minecraft.predicate.entity.EntityPredicate;
 import net.minecraft.predicate.entity.LootContextPredicate;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
 
 public class DungeonBossCriterion extends AbstractCriterion<DungeonBossCriterion.Conditions> {
-    static final Identifier ID = new Identifier("dungeonz:dungeon_completion");
-
-    @Override
-    public Identifier getId() {
-        return ID;
-    }
-
-    @Override
-    protected Conditions conditionsFromJson(JsonObject jsonObject, LootContextPredicate lootContextPredicate, AdvancementEntityPredicateDeserializer advancementEntityPredicateDeserializer) {
-        String dungeonType = JsonHelper.getString(jsonObject, "dungeon_type");
-        String difficulty = JsonHelper.getString(jsonObject, "difficulty");
-        return new Conditions(lootContextPredicate, dungeonType, difficulty);
-    }
 
     public void trigger(ServerPlayerEntity player, String dungeonType, String difficulty) {
         this.trigger(player, conditions -> conditions.matches(player, dungeonType, difficulty));
     }
 
-    class Conditions extends AbstractCriterionConditions {
-        private final String dungeonType;
-        private final String difficulty;
+    @Override
+    public Codec<Conditions> getConditionsCodec() {
+        return Conditions.CODEC;
+    }
 
-        public Conditions(LootContextPredicate lootContextPredicate, String dungeonType, String difficulty) {
-            super(ID, lootContextPredicate);
-            this.dungeonType = dungeonType;
-            this.difficulty = difficulty;
-        }
+    public record Conditions(Optional<LootContextPredicate> player, String dungeonType, String difficulty) implements AbstractCriterion.Conditions {
+
+        public static final Codec<Conditions> CODEC = RecordCodecBuilder
+                .create(instance -> instance
+                        .group(EntityPredicate.LOOT_CONTEXT_PREDICATE_CODEC.optionalFieldOf("player").forGetter(Conditions::player),
+                                Codec.STRING.fieldOf("dungeon_type").forGetter(Conditions::dungeonType), Codec.STRING.fieldOf("difficulty").forGetter(Conditions::difficulty))
+                        .apply(instance, Conditions::new));
 
         public boolean matches(ServerPlayerEntity player, String dungeonType, String difficulty) {
             return this.dungeonType.equals(dungeonType) && this.difficulty.equals(difficulty);
         }
 
-        @Override
-        public JsonObject toJson(AdvancementEntityPredicateSerializer predicateSerializer) {
-            JsonObject jsonObject = super.toJson(predicateSerializer);
-            jsonObject.addProperty("dungeon_type", this.dungeonType);
-            jsonObject.addProperty("difficulty", this.difficulty);
-            return jsonObject;
-        }
     }
 
 }

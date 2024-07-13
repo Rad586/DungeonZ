@@ -30,7 +30,6 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.Registries;
@@ -48,6 +47,7 @@ import net.minecraft.structure.StructurePiecesCollector;
 import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.structure.pool.StructurePool;
 import net.minecraft.structure.pool.StructurePoolBasedGenerator;
+import net.minecraft.structure.pool.alias.StructurePoolAliasLookup;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
@@ -61,6 +61,7 @@ import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.TeleportTarget;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
+import net.minecraft.world.gen.structure.JigsawStructure;
 import net.minecraft.world.gen.structure.Structure;
 import net.rpgdifficulty.api.MobStrengthener;
 
@@ -81,8 +82,8 @@ public class DungeonPlacementHandler {
                     break;
                 }
                 if (i == 3) {
-                    playerBlockPos = BlockPos.ofFloored(PlayerEntity.findRespawnPosition(oldWorld.getServer().getWorld(serverPlayerEntity.getSpawnPointDimension()),
-                            ((ServerPlayerAccess) serverPlayerEntity).getDungeonSpawnBlockPos(), 0.0f, true, true).get());
+                    Vec3d vec3d = serverPlayerEntity.getRespawnTarget(true, TeleportTarget.NO_OP).pos();
+                    playerBlockPos = BlockPos.ofFloored(vec3d.getX(), vec3d.getY(), vec3d.getZ());
                 }
             }
         }
@@ -93,21 +94,22 @@ public class DungeonPlacementHandler {
 
         portalEntity.joinDungeon(serverPlayerEntity.getUuid());
 
-        return new TeleportTarget(Vec3d.of(new BlockPos(0, 0, 0).add(portalPos.getX() * 16, 100, portalPos.getZ() * 16)).add(0.5, 0, 0.5), Vec3d.ZERO, 0, 0);
+        return new TeleportTarget(dungeonWorld, Vec3d.of(new BlockPos(0, 0, 0).add(portalPos.getX() * 16, 100, portalPos.getZ() * 16)).add(0.5, 0, 0.5), Vec3d.ZERO, 0, 0, TeleportTarget.NO_OP);
     }
 
     public static TeleportTarget leave(ServerPlayerEntity serverPlayerEntity, ServerWorld serverWorld) {
         if (serverWorld.getBlockEntity(((ServerPlayerAccess) serverPlayerEntity).getDungeonPortalBlockPos()) != null) {
             ((DungeonPortalEntity) serverWorld.getBlockEntity(((ServerPlayerAccess) serverPlayerEntity).getDungeonPortalBlockPos())).leaveDungeon(serverPlayerEntity.getUuid());
         }
-        return new TeleportTarget(Vec3d.of(((ServerPlayerAccess) serverPlayerEntity).getDungeonSpawnBlockPos()).add(0.5, 0, 0.5), Vec3d.ZERO, serverWorld.random.nextFloat() * 360F, 0);
+        return new TeleportTarget(serverWorld, Vec3d.of(((ServerPlayerAccess) serverPlayerEntity).getDungeonSpawnBlockPos()).add(0.5, 0, 0.5), Vec3d.ZERO, serverWorld.random.nextFloat() * 360F, 0,
+                TeleportTarget.NO_OP);
     }
 
     public static void generateDungeonStructure(ServerWorld world, BlockPos pos, DungeonPortalEntity portalEntity) {
         Registry<StructurePool> registry = world.getRegistryManager().get(RegistryKeys.TEMPLATE_POOL);
 
         RegistryEntry<StructurePool> registryEntry = registry.entryOf(RegistryKey.of(RegistryKeys.TEMPLATE_POOL, portalEntity.getDungeon().getStructurePoolId()));
-        generate(world, portalEntity, portalEntity.getDungeon(), registryEntry, new Identifier("dungeonz:spawn"), 64, pos, false);
+        generate(world, portalEntity, portalEntity.getDungeon(), registryEntry, Identifier.of("dungeonz:spawn"), 64, pos, false);
     }
 
     private static boolean generate(ServerWorld world, DungeonPortalEntity portalEntity, Dungeon dungeon, RegistryEntry<StructurePool> structurePool, Identifier id, int size, BlockPos pos,
@@ -118,7 +120,9 @@ public class DungeonPlacementHandler {
         Random random = world.getRandom();
         Structure.Context context = new Structure.Context(world.getRegistryManager(), chunkGenerator, chunkGenerator.getBiomeSource(), world.getChunkManager().getNoiseConfig(),
                 structureTemplateManager, world.getSeed(), new ChunkPos(pos), world, registryEntry -> true);
-        Optional<Structure.StructurePosition> optional = StructurePoolBasedGenerator.generate(context, structurePool, Optional.of(id), size, pos, false, Optional.empty(), 512);
+
+        Optional<Structure.StructurePosition> optional = StructurePoolBasedGenerator.generate(context, structurePool, Optional.of(id), size, pos, false, Optional.empty(), 512,
+                StructurePoolAliasLookup.EMPTY, JigsawStructure.DEFAULT_DIMENSION_PADDING, JigsawStructure.DEFAULT_LIQUID_SETTINGS);
         if (optional.isPresent()) {
             HashMap<Integer, ArrayList<BlockPos>> blockIdPosMap = new HashMap<Integer, ArrayList<BlockPos>>();
             ArrayList<BlockPos> chestPosList = new ArrayList<BlockPos>();
@@ -173,7 +177,7 @@ public class DungeonPlacementHandler {
                                                 poolStructurePiece.getBoundingBox().getMaxZ());
                                         dungeonGateEntity.markDirty();
                                     }
-                                } else if (state.getBlock() instanceof FallingBlock fallingBlock) {
+                                } else if (state.getBlock() instanceof @SuppressWarnings("unused") FallingBlock fallingBlock) {
 
                                 }
                             }
@@ -268,7 +272,7 @@ public class DungeonPlacementHandler {
                     MobEntity mobEntity = createMob(world, dungeon.getBlockIdEntityMap().get(entry.getKey()).get(world.getRandom().nextInt(dungeon.getBlockIdEntityMap().get(entry.getKey()).size())),
                             null);
                     // hopefully initialize doesn't lead to problems
-                    mobEntity.initialize(world, world.getLocalDifficulty(entry.getValue().get(i)), SpawnReason.STRUCTURE, null, null);
+                    mobEntity.initialize(world, world.getLocalDifficulty(entry.getValue().get(i)), SpawnReason.STRUCTURE, null);
                     mobEntity.setPersistent();
                     strengthenMob(mobEntity, dungeon, difficulty, false);
                     dungeon.getBlockIdBlockReplacementMap().get(entry.getKey());
@@ -280,7 +284,7 @@ public class DungeonPlacementHandler {
 
         // Refresh boss
         MobEntity bossEntity = createMob(world, dungeon.getBossEntityType(), dungeon.getBossNbtCompound());
-        bossEntity.initialize(world, world.getLocalDifficulty(portalEntity.getBossBlockPos()), SpawnReason.STRUCTURE, null, null);
+        bossEntity.initialize(world, world.getLocalDifficulty(portalEntity.getBossBlockPos()), SpawnReason.STRUCTURE, null);
         bossEntity.setPersistent();
         ((BossEntityAccess) bossEntity).setBoss(portalEntity.getPos(), portalEntity.getWorld().getRegistryKey().getValue().toString());
         strengthenMob(bossEntity, dungeon, difficulty, true);

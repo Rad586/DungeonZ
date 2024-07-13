@@ -2,6 +2,7 @@ package net.dungeonz.block.entity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -23,6 +24,8 @@ import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.registry.RegistryWrapper.WrapperLookup;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -33,7 +36,7 @@ import net.minecraft.world.World;
 public class DungeonGateEntity extends BlockEntity {
 
     private static final List<Direction> directions = List.of(Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST, Direction.UP, Direction.DOWN);
-    private Identifier gateBlockId = new Identifier("minecraft:chiseled_stone_bricks");
+    private Identifier gateBlockId = Identifier.of("minecraft:chiseled_stone_bricks");
     private String unlockItemId = "";
     private String gateParticleId = "minecraft:scrape";
     private List<Integer> dungeonEdgeList = new ArrayList<Integer>();
@@ -43,9 +46,9 @@ public class DungeonGateEntity extends BlockEntity {
     }
 
     @Override
-    public void readNbt(NbtCompound nbt) {
-        super.readNbt(nbt);
-        this.gateBlockId = new Identifier(nbt.getString("GateBlockId"));
+    public void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
+        super.readNbt(nbt, registryLookup);
+        this.gateBlockId = Identifier.of(nbt.getString("GateBlockId"));
         this.unlockItemId = nbt.getString("UnlockItemId");
         this.gateParticleId = nbt.getString("GateParticleId");
 
@@ -60,8 +63,8 @@ public class DungeonGateEntity extends BlockEntity {
     }
 
     @Override
-    public void writeNbt(NbtCompound nbt) {
-        super.writeNbt(nbt);
+    public void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
+        super.writeNbt(nbt, registryLookup);
         nbt.putString("GateBlockId", this.gateBlockId.toString());
         nbt.putString("UnlockItemId", this.unlockItemId.toString());
         nbt.putString("GateParticleId", this.gateParticleId.toString());
@@ -151,8 +154,8 @@ public class DungeonGateEntity extends BlockEntity {
     }
 
     @Override
-    public NbtCompound toInitialChunkDataNbt() {
-        return this.createNbt();
+    public NbtCompound toInitialChunkDataNbt(WrapperLookup registryLookup) {
+        return this.createNbt(registryLookup);
     }
 
     public void setUnlockItemId(String unlockItemId) {
@@ -164,7 +167,7 @@ public class DungeonGateEntity extends BlockEntity {
         if (this.unlockItemId.equals("")) {
             return null;
         }
-        return Registries.ITEM.get(new Identifier(this.unlockItemId));
+        return Registries.ITEM.get(Identifier.of(this.unlockItemId));
     }
 
     public void setBlockId(Identifier gateBlockId) {
@@ -185,7 +188,15 @@ public class DungeonGateEntity extends BlockEntity {
             return null;
         }
         try {
-            return ParticleEffectArgumentType.readParameters(new StringReader(this.gateParticleId.toString()), Registries.PARTICLE_TYPE.getReadOnlyWrapper());
+            // return (T)((ParticleEffect)type.getCodec().codec().parse(registryLookup.getOps(NbtOps.INSTANCE), nbtCompound).getOrThrow(INVALID_OPTIONS_EXCEPTION::create));
+            // Registries.PARTICLE_TYPE.get(Identifier.of(this.gateParticleId.toString())).getCodec().codec();
+
+            // return ParticleEffectArgumentType.readParameters(new StringReader(this.gateParticleId.toString()), Registries.PARTICLE_TYPE.getReadOnlyWrapper());
+            // return ParticleEffectArgumentType.readParameters(new StringReader(this.gateParticleId.toString()),
+            // RegistryWrapper.WrapperLookup.of(Registries.PARTICLE_TYPE.getReadOnlyWrapper().streamEntries()));
+
+            return ParticleEffectArgumentType.readParameters(new StringReader(this.gateParticleId.toString()),
+                    RegistryWrapper.WrapperLookup.of(Stream.of(Registries.PARTICLE_TYPE.getReadOnlyWrapper())));
         } catch (CommandSyntaxException commandSyntaxException) {
         }
         return null;

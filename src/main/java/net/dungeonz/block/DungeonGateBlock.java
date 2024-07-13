@@ -2,6 +2,8 @@ package net.dungeonz.block;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.mojang.serialization.MapCodec;
+
 import net.dungeonz.block.entity.DungeonGateEntity;
 import net.dungeonz.init.BlockInit;
 import net.dungeonz.init.ConfigInit;
@@ -14,17 +16,18 @@ import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.client.util.ParticleUtil;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
+import net.minecraft.item.ItemStack;
+import net.minecraft.particle.ParticleUtil;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.ItemActionResult;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.intprovider.UniformIntProvider;
@@ -34,10 +37,10 @@ import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 
-@SuppressWarnings("deprecation")
 public class DungeonGateBlock extends BlockWithEntity {
 
     public static BooleanProperty ENABLED = Properties.ENABLED;
+    public static final MapCodec<DungeonGateBlock> CODEC = DungeonGateBlock.createCodec(DungeonGateBlock::new);
 
     public DungeonGateBlock(Settings settings) {
         super(settings);
@@ -52,11 +55,11 @@ public class DungeonGateBlock extends BlockWithEntity {
     @Override
     @Nullable
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
-        return DungeonGateBlock.checkType(type, BlockInit.DUNGEON_GATE_ENTITY, world.isClient() ? null : DungeonGateEntity::serverTick);
+        return DungeonGateBlock.validateTicker(type, BlockInit.DUNGEON_GATE_ENTITY, world.isClient() ? null : DungeonGateEntity::serverTick);
     }
 
     @Override
-    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (player.getWorld().getBlockEntity(pos) != null && player.getWorld().getBlockEntity(pos) instanceof DungeonGateEntity) {
             DungeonGateEntity dungeonGateEntity = (DungeonGateEntity) player.getWorld().getBlockEntity(pos);
             if (player.isCreativeLevelTwoOp()) {
@@ -68,7 +71,7 @@ public class DungeonGateBlock extends BlockWithEntity {
                         DungeonServerPacket.writeS2COpenOpScreenPacket((ServerPlayerEntity) player, null, dungeonGateEntity);
                     }
                 }
-                return ActionResult.success(world.isClient());
+                return ItemActionResult.success(world.isClient());
             } else if (dungeonGateEntity.getUnlockItem() != null && player.getStackInHand(hand).isOf(dungeonGateEntity.getUnlockItem())) {
                 if (!world.isClient()) {
                     if (!player.isCreative()) {
@@ -76,11 +79,11 @@ public class DungeonGateBlock extends BlockWithEntity {
                     }
                     dungeonGateEntity.unlockGate(pos);
                 }
-                return ActionResult.success(world.isClient());
+                return ItemActionResult.success(world.isClient());
             }
 
         }
-        return super.onUse(state, world, pos, player, hand, hit);
+        return super.onUseWithItem(stack, state, world, pos, player, hand, hit);
     }
 
     @Override
@@ -110,7 +113,7 @@ public class DungeonGateBlock extends BlockWithEntity {
     }
 
     @Override
-    public boolean canPathfindThrough(BlockState state, BlockView world, BlockPos pos, NavigationType type) {
+    protected boolean canPathfindThrough(BlockState state, NavigationType type) {
         if (state.get(ENABLED)) {
             return false;
         }
@@ -131,6 +134,11 @@ public class DungeonGateBlock extends BlockWithEntity {
             return VoxelShapes.empty();
         }
         return super.getCollisionShape(state, world, pos, context);
+    }
+
+    @Override
+    protected MapCodec<? extends BlockWithEntity> getCodec() {
+        return CODEC;
     }
 
 }

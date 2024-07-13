@@ -5,15 +5,20 @@ import net.dungeonz.init.BlockInit;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.Spawner;
+import net.minecraft.block.spawner.MobSpawnerEntry;
+import net.minecraft.entity.EntityType;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
+import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.registry.RegistryWrapper.WrapperLookup;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.MobSpawnerEntry;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
-public class DungeonSpawnerEntity extends BlockEntity {
+public class DungeonSpawnerEntity extends BlockEntity implements Spawner {
     private final DungeonSpawnerLogic logic = new DungeonSpawnerLogic() {
 
         @Override
@@ -36,14 +41,14 @@ public class DungeonSpawnerEntity extends BlockEntity {
     }
 
     @Override
-    public void readNbt(NbtCompound nbt) {
-        super.readNbt(nbt);
+    public void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
+        super.readNbt(nbt, registryLookup);
         this.logic.readNbt(this.world, this.pos, nbt);
     }
 
     @Override
-    protected void writeNbt(NbtCompound nbt) {
-        super.writeNbt(nbt);
+    protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
+        super.writeNbt(nbt, registryLookup);
         this.logic.writeNbt(nbt);
     }
 
@@ -61,8 +66,8 @@ public class DungeonSpawnerEntity extends BlockEntity {
     }
 
     @Override
-    public NbtCompound toInitialChunkDataNbt() {
-        NbtCompound nbtCompound = this.createNbt();
+    public NbtCompound toInitialChunkDataNbt(WrapperLookup registryLookup) {
+        NbtCompound nbtCompound = this.createNbt(registryLookup);
         nbtCompound.remove("SpawnPotentials");
         return nbtCompound;
     }
@@ -82,6 +87,11 @@ public class DungeonSpawnerEntity extends BlockEntity {
 
     public DungeonSpawnerLogic getLogic() {
         return this.logic;
+    }
+
+    @Override
+    public void setEntityType(EntityType<?> entityType, Random random) {
+        this.logic.setEntityId(entityType);
     }
 
 }

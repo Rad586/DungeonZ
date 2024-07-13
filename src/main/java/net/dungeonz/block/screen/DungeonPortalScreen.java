@@ -15,6 +15,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ButtonTextures;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.entity.player.PlayerEntity;
@@ -31,8 +32,8 @@ import net.partyaddon.group.GroupManager;
 @Environment(EnvType.CLIENT)
 public class DungeonPortalScreen extends HandledScreen<DungeonPortalScreenHandler> implements ScreenHandlerListener {
 
-    private static Identifier TEXTURE = new Identifier("dungeonz:textures/gui/dungeon_portal.png");
-    private static final Identifier ICONS = new Identifier("dungeonz:textures/gui/dungeon_icons.png");
+    private static Identifier TEXTURE = Identifier.of("dungeonz:textures/gui/dungeon_portal.png");
+    private static final Identifier ICONS = Identifier.of("dungeonz:textures/gui/dungeon_icons.png");
     private static final Text JOIN = Text.translatable("dungeon.task.join");
     private static final Text LEAVE = Text.translatable("dungeon.task.leave");
 
@@ -150,7 +151,6 @@ public class DungeonPortalScreen extends HandledScreen<DungeonPortalScreenHandle
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context);
         super.render(context, mouseX, mouseY, delta);
 
         // Title
@@ -258,7 +258,7 @@ public class DungeonPortalScreen extends HandledScreen<DungeonPortalScreenHandle
         }
 
         @Override
-        public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
+        public void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
             int j = 20;
             if (!this.active) {
                 j = 0;
@@ -298,6 +298,8 @@ public class DungeonPortalScreen extends HandledScreen<DungeonPortalScreenHandle
 
     public class DungeonDifficultyButton extends ButtonWidget {
         private Text text;
+        private static final ButtonTextures TEXTURES = new ButtonTextures(Identifier.ofVanilla("widget/button"), Identifier.ofVanilla("widget/button_disabled"),
+                Identifier.ofVanilla("widget/button_highlighted"));
 
         public DungeonDifficultyButton(int x, int y, Text text, ButtonWidget.PressAction onPress) {
             super(x, y, 60, 20, text, onPress, DEFAULT_NARRATION_SUPPLIER);
@@ -309,30 +311,20 @@ public class DungeonPortalScreen extends HandledScreen<DungeonPortalScreenHandle
         }
 
         @Override
-        public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
+        public void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
             MinecraftClient minecraftClient = MinecraftClient.getInstance();
             TextRenderer textRenderer = minecraftClient.textRenderer;
 
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, this.alpha);
-            int i = this.getTextureY();
+
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.enableDepthTest();
-            context.drawTexture(WIDGETS_TEXTURE, this.getX(), this.getY(), 0, 46 + i * 20, this.width / 2, this.height);
-            context.drawTexture(WIDGETS_TEXTURE, this.getX() + this.width / 2, this.getY(), 200 - this.width / 2, 46 + i * 20, this.width / 2, this.height);
+
+            context.drawGuiTexture(TEXTURES.get(this.active, this.isSelected()), this.getX(), this.getY(), this.getWidth(), this.getHeight());
             int j = this.active ? 0xFFFFFF : 0xA0A0A0;
             context.drawCenteredTextWithShadow(textRenderer, this.text, this.getX() + this.width / 2, this.getY() + (this.height - 8) / 2, j | MathHelper.ceil(this.alpha * 255.0f) << 24);
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        }
-
-        private int getTextureY() {
-            int i = 1;
-            if (!this.active) {
-                i = 0;
-            } else if (this.isSelected()) {
-                i = 2;
-            }
-            return i;
         }
 
     }
@@ -353,7 +345,7 @@ public class DungeonPortalScreen extends HandledScreen<DungeonPortalScreenHandle
         }
 
         @Override
-        public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
+        public void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();

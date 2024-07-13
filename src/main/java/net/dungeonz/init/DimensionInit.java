@@ -11,11 +11,11 @@ import net.minecraft.world.dimension.DimensionType;
 
 public class DimensionInit {
 
-    public static final RegistryKey<World> DUNGEON_WORLD = RegistryKey.of(RegistryKeys.WORLD, new Identifier("dungeonz", "dungeon"));
-    public static final RegistryKey<DimensionType> DUNGEON_DIMENSION_TYPE_KEY = RegistryKey.of(RegistryKeys.DIMENSION_TYPE, new Identifier("dungeonz", "dungeon"));
+    public static final RegistryKey<World> DUNGEON_WORLD = RegistryKey.of(RegistryKeys.WORLD, Identifier.of("dungeonz", "dungeon"));
+    public static final RegistryKey<DimensionType> DUNGEON_DIMENSION_TYPE_KEY = RegistryKey.of(RegistryKeys.DIMENSION_TYPE, Identifier.of("dungeonz", "dungeon"));
 
     public static void init() {
-        Registry.register(Registries.CHUNK_GENERATOR, new Identifier("dungeonz", "dungeon"), DungeonChunkGenerator.CODEC);
+        Registry.register(Registries.CHUNK_GENERATOR, Identifier.of("dungeonz", "dungeon"), DungeonChunkGenerator.CODEC);
     }
 
 }

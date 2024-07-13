@@ -4,17 +4,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.jetbrains.annotations.Nullable;
 
 import net.dungeonz.block.entity.DungeonPortalEntity;
 import net.dungeonz.init.BlockInit;
+import net.dungeonz.network.packet.DungeonPortalPacket;
 import net.dungeonz.util.DungeonHelper;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerContext;
 import net.minecraft.util.Identifier;
@@ -33,69 +32,89 @@ public class DungeonPortalScreenHandler extends ScreenHandler {
     private List<ItemStack> requiredItemStacks = new ArrayList<ItemStack>();
     private int waitingGroupSize = 0;
 
-    public DungeonPortalScreenHandler(int syncId, PlayerInventory playerInventory, PacketByteBuf buf) {
-        this(syncId, playerInventory, new DungeonPortalEntity(buf.readBlockPos(), playerInventory.player.getWorld().getBlockState(buf.readBlockPos())), ScreenHandlerContext.EMPTY);
-        this.pos = buf.readBlockPos();
-        int dungeonPlayerCount = buf.readInt();
-        List<UUID> dungeonPlayerUUIDs = new ArrayList<UUID>();
-        for (int i = 0; i < dungeonPlayerCount; i++) {
-            dungeonPlayerUUIDs.add(buf.readUuid());
-        }
-        int deadDungeonPlayerCount = buf.readInt();
-        List<UUID> deadDungeonPlayerUUIDs = new ArrayList<UUID>();
-        for (int i = 0; i < deadDungeonPlayerCount; i++) {
-            deadDungeonPlayerUUIDs.add(buf.readUuid());
-        }
-        int difficultyCount = buf.readInt();
-        List<String> difficulties = new ArrayList<String>();
-        if (difficultyCount != 0) {
-            for (int i = 0; i < difficultyCount; i++) {
-                difficulties.add(buf.readString());
-            }
-        }
-        int possibleLootCount = buf.readInt();
-        Map<String, List<ItemStack>> possibleLootDifficultyItemStackMap = new HashMap<String, List<ItemStack>>();
-        if (possibleLootCount != 0) {
-            for (int i = 0; i < possibleLootCount; i++) {
-                List<ItemStack> itemStacks = new ArrayList<ItemStack>();
-                String difficulty = buf.readString();
-                int lootCount = buf.readInt();
-                for (int u = 0; u < lootCount; u++) {
-                    itemStacks.add(buf.readItemStack());
-                }
-                possibleLootDifficultyItemStackMap.put(difficulty, itemStacks);
-            }
-        }
-        final Map<String, List<ItemStack>> possibleLootDifficultyItemStacks = possibleLootDifficultyItemStackMap;
-        int requiredItemCount = buf.readInt();
-        List<ItemStack> requiredItemStacks = new ArrayList<ItemStack>();
-        if (requiredItemCount != 0) {
-            for (int i = 0; i < requiredItemCount; i++) {
-                requiredItemStacks.add(buf.readItemStack());
-            }
-        }
-        int maxGroupSize = buf.readInt();
-        int minGroupSize = buf.readInt();
-        int waitingGroupSize = buf.readInt();
-        int cooldownTime = buf.readInt();
-        String difficulty = buf.readString();
-        boolean disableEffects = buf.readBoolean();
-        boolean privateGroup = buf.readBoolean();
+    public DungeonPortalScreenHandler(int syncId, PlayerInventory playerInventory, DungeonPortalPacket packet) {
+        this(syncId, playerInventory, new DungeonPortalEntity(packet.blockPos(), playerInventory.player.getWorld().getBlockState(packet.blockPos())), ScreenHandlerContext.EMPTY);
+        this.pos = packet.blockPos();
 
-        this.setDifficulties(difficulties);
-        this.setPossibleLootItemStacks(possibleLootDifficultyItemStacks);
-        this.setRequiredItemStacks(requiredItemStacks);
-        this.setWaitingGroupSize(waitingGroupSize);
+        this.setDifficulties(packet.difficulties());
+        this.setPossibleLootItemStacks(packet.possibleLoot());
+        this.setRequiredItemStacks(packet.requiredItemStacks());
 
-        this.getDungeonPortalEntity().setDungeonPlayerUuids(dungeonPlayerUUIDs);
-        this.getDungeonPortalEntity().setDeadDungeonPlayerUuids(deadDungeonPlayerUUIDs);
-        this.getDungeonPortalEntity().setMaxGroupSize(maxGroupSize);
-        this.getDungeonPortalEntity().setMinGroupSize(minGroupSize);
-        this.getDungeonPortalEntity().setCooldownTime(cooldownTime);
-        this.getDungeonPortalEntity().setDifficulty(difficulty);
-        this.getDungeonPortalEntity().setDisableEffects(disableEffects);
-        this.getDungeonPortalEntity().setPrivateGroup(privateGroup);
+        this.setWaitingGroupSize(packet.waitingPlayerCount());
+
+        this.getDungeonPortalEntity().setDungeonPlayerUuids(packet.playerUuids());
+        this.getDungeonPortalEntity().setDeadDungeonPlayerUuids(packet.deadPlayerUuids());
+        this.getDungeonPortalEntity().setMaxGroupSize(packet.maxGroupSize());
+        this.getDungeonPortalEntity().setMinGroupSize(packet.minGroupSize());
+        this.getDungeonPortalEntity().setCooldownTime(packet.cooldownTime());
+        this.getDungeonPortalEntity().setDifficulty(packet.difficulty());
+        this.getDungeonPortalEntity().setDisableEffects(packet.disableEffects());
+        this.getDungeonPortalEntity().setPrivateGroup(packet.privateGroup());
     }
+
+    // public DungeonPortalScreenHandler(int syncId, PlayerInventory playerInventory, PacketByteBuf buf) {
+    // this(syncId, playerInventory, new DungeonPortalEntity(buf.readBlockPos(), playerInventory.player.getWorld().getBlockState(buf.readBlockPos())), ScreenHandlerContext.EMPTY);
+    // this.pos = buf.readBlockPos();
+    // int dungeonPlayerCount = buf.readInt();
+    // List<UUID> dungeonPlayerUUIDs = new ArrayList<UUID>();
+    // for (int i = 0; i < dungeonPlayerCount; i++) {
+    // dungeonPlayerUUIDs.add(buf.readUuid());
+    // }
+    // int deadDungeonPlayerCount = buf.readInt();
+    // List<UUID> deadDungeonPlayerUUIDs = new ArrayList<UUID>();
+    // for (int i = 0; i < deadDungeonPlayerCount; i++) {
+    // deadDungeonPlayerUUIDs.add(buf.readUuid());
+    // }
+    // int difficultyCount = buf.readInt();
+    // List<String> difficulties = new ArrayList<String>();
+    // if (difficultyCount != 0) {
+    // for (int i = 0; i < difficultyCount; i++) {
+    // difficulties.add(buf.readString());
+    // }
+    // }
+    // int possibleLootCount = buf.readInt();
+    // Map<String, List<ItemStack>> possibleLootDifficultyItemStackMap = new HashMap<String, List<ItemStack>>();
+    // if (possibleLootCount != 0) {
+    // for (int i = 0; i < possibleLootCount; i++) {
+    // List<ItemStack> itemStacks = new ArrayList<ItemStack>();
+    // String difficulty = buf.readString();
+    // int lootCount = buf.readInt();
+    // for (int u = 0; u < lootCount; u++) {
+    // itemStacks.add(buf.readItemStack());
+    // }
+    // possibleLootDifficultyItemStackMap.put(difficulty, itemStacks);
+    // }
+    // }
+    // final Map<String, List<ItemStack>> possibleLootDifficultyItemStacks = possibleLootDifficultyItemStackMap;
+    // int requiredItemCount = buf.readInt();
+    // List<ItemStack> requiredItemStacks = new ArrayList<ItemStack>();
+    // if (requiredItemCount != 0) {
+    // for (int i = 0; i < requiredItemCount; i++) {
+    // requiredItemStacks.add(buf.readItemStack());
+    // }
+    // }
+    // int maxGroupSize = buf.readInt();
+    // int minGroupSize = buf.readInt();
+    // int waitingGroupSize = buf.readInt();
+    // int cooldownTime = buf.readInt();
+    // String difficulty = buf.readString();
+    // boolean disableEffects = buf.readBoolean();
+    // boolean privateGroup = buf.readBoolean();
+
+    // this.setDifficulties(difficulties);
+    // this.setPossibleLootItemStacks(possibleLootDifficultyItemStacks);
+    // this.setRequiredItemStacks(requiredItemStacks);
+    // this.setWaitingGroupSize(waitingGroupSize);
+
+    // this.getDungeonPortalEntity().setDungeonPlayerUuids(dungeonPlayerUUIDs);
+    // this.getDungeonPortalEntity().setDeadDungeonPlayerUuids(deadDungeonPlayerUUIDs);
+    // this.getDungeonPortalEntity().setMaxGroupSize(maxGroupSize);
+    // this.getDungeonPortalEntity().setMinGroupSize(minGroupSize);
+    // this.getDungeonPortalEntity().setCooldownTime(cooldownTime);
+    // this.getDungeonPortalEntity().setDifficulty(difficulty);
+    // this.getDungeonPortalEntity().setDisableEffects(disableEffects);
+    // this.getDungeonPortalEntity().setPrivateGroup(privateGroup);
+    // }
 
     public DungeonPortalScreenHandler(int syncId, PlayerInventory playerInventory, DungeonPortalEntity dungeonPortalEntity, ScreenHandlerContext context) {
         super(BlockInit.PORTAL, syncId);

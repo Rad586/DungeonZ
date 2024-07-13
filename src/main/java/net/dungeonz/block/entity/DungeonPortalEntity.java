@@ -19,6 +19,7 @@ import net.dungeonz.init.CriteriaInit;
 import net.dungeonz.init.DimensionInit;
 import net.dungeonz.init.SoundInit;
 import net.dungeonz.network.DungeonServerPacket;
+import net.dungeonz.network.packet.DungeonPortalPacket;
 import net.dungeonz.util.DungeonHelper;
 import net.dungeonz.util.InventoryHelper;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
@@ -31,8 +32,9 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.registry.RegistryWrapper.WrapperLookup;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerContext;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -44,7 +46,7 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 
-public class DungeonPortalEntity extends EndPortalBlockEntity implements ExtendedScreenHandlerFactory {
+public class DungeonPortalEntity extends EndPortalBlockEntity implements ExtendedScreenHandlerFactory<DungeonPortalPacket> {
 
     private Text title = Text.translatable("container.dungeon_portal");
     private String dungeonType = "";
@@ -75,8 +77,8 @@ public class DungeonPortalEntity extends EndPortalBlockEntity implements Extende
     }
 
     @Override
-    public void readNbt(NbtCompound nbt) {
-        super.readNbt(nbt);
+    public void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
+        super.readNbt(nbt, registryLookup);
         this.dungeonType = nbt.getString("DungeonType");
         this.difficulty = nbt.getString("Difficulty");
         this.dungeonStructureGenerated = nbt.getBoolean("DungeonStructureGenerated");
@@ -154,8 +156,8 @@ public class DungeonPortalEntity extends EndPortalBlockEntity implements Extende
     }
 
     @Override
-    public void writeNbt(NbtCompound nbt) {
-        super.writeNbt(nbt);
+    public void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
+        super.writeNbt(nbt, registryLookup);
         nbt.putString("DungeonType", this.dungeonType);
         nbt.putString("Difficulty", this.difficulty);
         nbt.putBoolean("DungeonStructureGenerated", this.dungeonStructureGenerated);
@@ -327,8 +329,8 @@ public class DungeonPortalEntity extends EndPortalBlockEntity implements Extende
     }
 
     @Override
-    public NbtCompound toInitialChunkDataNbt() {
-        return this.createNbt();
+    public NbtCompound toInitialChunkDataNbt(WrapperLookup registryLookup) {
+        return this.createNbt(registryLookup);
     }
 
     @Override
@@ -342,56 +344,19 @@ public class DungeonPortalEntity extends EndPortalBlockEntity implements Extende
     }
 
     @Override
-    public void writeScreenOpeningData(ServerPlayerEntity player, PacketByteBuf buf) {
-        buf.writeBlockPos(this.pos);
-        buf.writeBlockPos(this.pos);
-        buf.writeBlockPos(this.pos);
-
-        buf.writeInt(this.getDungeonPlayerCount());
-        for (int i = 0; i < this.getDungeonPlayerCount(); i++) {
-            buf.writeUuid(this.getDungeonPlayerUuids().get(i));
-        }
-        buf.writeInt(this.getDeadDungeonPlayerUUIDs().size());
-        for (int i = 0; i < this.getDeadDungeonPlayerUUIDs().size(); i++) {
-            buf.writeUuid(this.getDeadDungeonPlayerUUIDs().get(i));
-        }
+    public DungeonPortalPacket getScreenOpeningData(ServerPlayerEntity player) {
+        List<String> difficulties = new ArrayList<String>();
+        Map<String, List<ItemStack>> possibleLoot = new HashMap<>();
+        List<ItemStack> requiredItemStacks = new ArrayList<ItemStack>();
 
         if (this.getDungeon() != null) {
-            // Difficulty
-            buf.writeInt(this.getDungeon().getDifficultyList().size());
-            for (int i = 0; i < this.getDungeon().getDifficultyList().size(); i++) {
-                buf.writeString(this.getDungeon().getDifficultyList().get(i));
-            }
-            // Possible Loot Items
-            Map<String, List<ItemStack>> possibleLoot = DungeonHelper.getPossibleLootItemStackMap(this.getDungeon(), player.getServer());
-            buf.writeInt(possibleLoot.size());
-            Iterator<Entry<String, List<ItemStack>>> possibleLootIterator = possibleLoot.entrySet().iterator();
-            while (possibleLootIterator.hasNext()) {
-                Entry<String, List<ItemStack>> entry = possibleLootIterator.next();
-                buf.writeString(entry.getKey());
-                buf.writeInt(entry.getValue().size());
-                for (int i = 0; i < entry.getValue().size(); i++) {
-                    buf.writeItemStack(entry.getValue().get(i));
-                }
-            }
-            // Required Items
-            buf.writeInt(DungeonHelper.getRequiredItemStackList(this.getDungeon()).size());
-            for (int i = 0; i < DungeonHelper.getRequiredItemStackList(this.getDungeon()).size(); i++) {
-                buf.writeItemStack(DungeonHelper.getRequiredItemStackList(this.getDungeon()).get(i));
-            }
-        } else {
-            buf.writeInt(0);
-            buf.writeInt(0);
-            buf.writeInt(0);
+            difficulties = this.getDungeon().getDifficultyList();
+            possibleLoot = DungeonHelper.getPossibleLootItemStackMap(this.getDungeon(), player.getServer());
+            requiredItemStacks = DungeonHelper.getRequiredItemStackList(this.getDungeon());
         }
 
-        buf.writeInt(this.getMaxGroupSize());
-        buf.writeInt(this.getMinGroupSize());
-        buf.writeInt(this.getWaitingUuids().size());
-        buf.writeInt(this.getCooldownTime());
-        buf.writeString(this.getDifficulty());
-        buf.writeBoolean(this.getDisableEffects());
-        buf.writeBoolean(this.getPrivateGroup());
+        return new DungeonPortalPacket(this.pos, this.getDungeonPlayerUuids(), this.getDeadDungeonPlayerUUIDs(), difficulties, possibleLoot, requiredItemStacks, this.getMaxGroupSize(),
+                this.getMinGroupSize(), this.getWaitingUuids().size(), this.getCooldownTime(), this.getDifficulty(), this.getDisableEffects(), this.getPrivateGroup());
     }
 
     public void finishDungeon(ServerWorld world, BlockPos pos) {

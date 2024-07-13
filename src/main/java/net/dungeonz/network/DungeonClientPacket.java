@@ -1,12 +1,12 @@
 package net.dungeonz.network;
 
-import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.jetbrains.annotations.Nullable;
 
-import io.netty.buffer.Unpooled;
 import net.dungeonz.access.ClientPlayerAccess;
 import net.dungeonz.access.InGameHudAccess;
 import net.dungeonz.block.entity.DungeonGateEntity;
@@ -17,12 +17,22 @@ import net.dungeonz.block.screen.DungeonPortalScreen;
 import net.dungeonz.block.screen.DungeonPortalScreenHandler;
 import net.dungeonz.init.SoundInit;
 import net.dungeonz.item.screen.DungeonCompassScreen;
+import net.dungeonz.network.packet.DungeonCompassPacket;
+import net.dungeonz.network.packet.DungeonCompassScreenPacket;
+import net.dungeonz.network.packet.DungeonDifficultyPacket;
+import net.dungeonz.network.packet.DungeonEffectPacket;
+import net.dungeonz.network.packet.DungeonGatePacket;
+import net.dungeonz.network.packet.DungeonInfoPacket;
+import net.dungeonz.network.packet.DungeonOpScreenPacket;
+import net.dungeonz.network.packet.DungeonSyncGatePacket;
+import net.dungeonz.network.packet.DungeonSyncScreenPacket;
+import net.dungeonz.network.packet.DungeonTeleportCountdownPacket;
+import net.dungeonz.network.packet.DungeonTeleportPacket;
+import net.dungeonz.network.packet.DungeonTypePacket;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.packet.c2s.play.CustomPayloadC2SPacket;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -30,155 +40,118 @@ import net.minecraft.util.math.BlockPos;
 @Environment(EnvType.CLIENT)
 public class DungeonClientPacket {
 
+    @SuppressWarnings("resource")
     public static void init() {
-        ClientPlayNetworking.registerGlobalReceiver(DungeonServerPacket.DUNGEON_INFO_PACKET, (client, handler, buf, sender) -> {
-            List<Integer> breakableBlockIdList = buf.readIntList();
-            List<Integer> placeableBlockIdList = buf.readIntList();
-            boolean allowElytra = buf.readBoolean();
-            client.execute(() -> {
-                ((ClientPlayerAccess) client.player).setClientDungeonInfo(breakableBlockIdList, placeableBlockIdList, allowElytra);
+        ClientPlayNetworking.registerGlobalReceiver(DungeonInfoPacket.PACKET_ID, (payload, context) -> {
+            List<Integer> breakableBlockIdList = payload.breakableBlockIdList();
+            List<Integer> placeableBlockIdList = payload.placeableBlockIdList();
+            boolean allowElytra = payload.allowElytra();
+            context.client().execute(() -> {
+                ((ClientPlayerAccess) context.player()).setClientDungeonInfo(breakableBlockIdList, placeableBlockIdList, allowElytra);
             });
         });
-        ClientPlayNetworking.registerGlobalReceiver(DungeonServerPacket.SYNC_SCREEN_PACKET, (client, handler, buf, sender) -> {
-            BlockPos dungeonPortalPos = buf.readBlockPos();
-            String difficulty = buf.readString();
+        ClientPlayNetworking.registerGlobalReceiver(DungeonSyncScreenPacket.PACKET_ID, (payload, context) -> {
+            BlockPos dungeonPortalPos = payload.blockPos();
+            String difficulty = payload.difficulty();
 
-            client.execute(() -> {
-                if (client.world.getBlockEntity(dungeonPortalPos) != null && client.world.getBlockEntity(dungeonPortalPos) instanceof DungeonPortalEntity) {
-                    DungeonPortalEntity dungeonPortalEntity = (DungeonPortalEntity) client.world.getBlockEntity(dungeonPortalPos);
+            context.client().execute(() -> {
+                if (context.client().world.getBlockEntity(dungeonPortalPos) != null && context.client().world.getBlockEntity(dungeonPortalPos) instanceof DungeonPortalEntity) {
+                    DungeonPortalEntity dungeonPortalEntity = (DungeonPortalEntity) context.client().world.getBlockEntity(dungeonPortalPos);
                     dungeonPortalEntity.setDifficulty(difficulty);
 
-                    if (client.currentScreen instanceof DungeonPortalScreen) {
-                        ((DungeonPortalScreen) client.currentScreen).difficultyButton.setText(Text.translatable("dungeonz.difficulty." + difficulty));
+                    if (context.client().currentScreen instanceof DungeonPortalScreen) {
+                        ((DungeonPortalScreen) context.client().currentScreen).difficultyButton.setText(Text.translatable("dungeonz.difficulty." + difficulty));
                     }
-                    if (client.player.currentScreenHandler instanceof DungeonPortalScreenHandler) {
-                        ((DungeonPortalScreenHandler) client.player.currentScreenHandler).getDungeonPortalEntity().setDifficulty(difficulty);
+                    if (context.client().player.currentScreenHandler instanceof DungeonPortalScreenHandler) {
+                        ((DungeonPortalScreenHandler) context.client().player.currentScreenHandler).getDungeonPortalEntity().setDifficulty(difficulty);
                     }
                 }
             });
         });
-        ClientPlayNetworking.registerGlobalReceiver(DungeonServerPacket.OP_SCREEN_PACKET, (client, handler, buf, sender) -> {
-            String portalOrGate = buf.readString();
-            BlockPos portalOrGatePos = buf.readBlockPos();
-            String dungeonTypeOrBlockId = buf.readString();
-            String difficultyOrParticleId = buf.readString();
-            String unlockItemId = portalOrGate.equals("gate") ? buf.readString() : "";
+        ClientPlayNetworking.registerGlobalReceiver(DungeonOpScreenPacket.PACKET_ID, (payload, context) -> {
+            BlockPos portalOrGatePos = payload.blockPos();
+            String dungeonTypeOrBlockId = payload.blockIdOrDungeonType();
+            String difficultyOrParticleId = payload.particleEffectOrDifficulty();
+            String unlockItemId = payload.unlockItem();
 
-            client.execute(() -> {
-                if (client.world.getBlockEntity(portalOrGatePos) != null) {
-                    if (client.world.getBlockEntity(portalOrGatePos) instanceof DungeonPortalEntity) {
-                        DungeonPortalEntity dungeonPortalEntity = (DungeonPortalEntity) client.world.getBlockEntity(portalOrGatePos);
+            context.client().execute(() -> {
+                if (context.client().world.getBlockEntity(portalOrGatePos) != null) {
+                    if (context.client().world.getBlockEntity(portalOrGatePos) instanceof DungeonPortalEntity) {
+                        DungeonPortalEntity dungeonPortalEntity = (DungeonPortalEntity) context.client().world.getBlockEntity(portalOrGatePos);
                         dungeonPortalEntity.setDungeonType(dungeonTypeOrBlockId);
                         dungeonPortalEntity.setDifficulty(difficultyOrParticleId);
-                        client.setScreen(new DungeonPortalOpScreen(portalOrGatePos));
-                    } else if (client.world.getBlockEntity(portalOrGatePos) instanceof DungeonGateEntity) {
-                        DungeonGateEntity dungeonGateEntity = (DungeonGateEntity) client.world.getBlockEntity(portalOrGatePos);
-                        dungeonGateEntity.setBlockId(new Identifier(dungeonTypeOrBlockId));
+                        context.client().setScreen(new DungeonPortalOpScreen(portalOrGatePos));
+                    } else if (context.client().world.getBlockEntity(portalOrGatePos) instanceof DungeonGateEntity) {
+                        DungeonGateEntity dungeonGateEntity = (DungeonGateEntity) context.client().world.getBlockEntity(portalOrGatePos);
+                        dungeonGateEntity.setBlockId(Identifier.of(dungeonTypeOrBlockId));
                         dungeonGateEntity.setParticleEffectId(difficultyOrParticleId);
                         dungeonGateEntity.setUnlockItemId(unlockItemId);
-                        client.setScreen(new DungeonGateOpScreen(portalOrGatePos));
+                        context.client().setScreen(new DungeonGateOpScreen(portalOrGatePos));
                     }
                 }
             });
         });
-        ClientPlayNetworking.registerGlobalReceiver(DungeonServerPacket.COMPASS_SCREEN_PACKET, (client, handler, buf, sender) -> {
-            String dungeonType = buf.readString();
-            int dungeonCount = buf.readInt();
-            List<String> dungeonIds = new ArrayList<String>();
-            for (int i = 0; i < dungeonCount; i++) {
-                dungeonIds.add(buf.readString());
-            }
-            client.execute(() -> {
-                client.setScreen(new DungeonCompassScreen(dungeonType, dungeonIds));
+        ClientPlayNetworking.registerGlobalReceiver(DungeonCompassScreenPacket.PACKET_ID, (payload, context) -> {
+            String dungeonType = payload.dungeonType();
+            List<String> dungeonIds = payload.dungeonIdList();
+            context.client().execute(() -> {
+                context.client().setScreen(new DungeonCompassScreen(dungeonType, dungeonIds));
             });
         });
-        ClientPlayNetworking.registerGlobalReceiver(DungeonServerPacket.SYNC_GATE_BLOCK_PACKET, (client, handler, buf, sender) -> {
-            int posListSize = buf.readInt();
-            List<BlockPos> dungeonGatesPosList = new ArrayList<BlockPos>();
-            for (int i = 0; i < posListSize; i++) {
-                dungeonGatesPosList.add(buf.readBlockPos());
-            }
-            String blockId = buf.readString();
-            String particleId = buf.readString();
-            String unlockItemId = buf.readString();
+        ClientPlayNetworking.registerGlobalReceiver(DungeonSyncGatePacket.PACKET_ID, (payload, context) -> {
+            Set<BlockPos> dungeonGatesPosList = payload.dungeonGatesPosList();
 
-            client.execute(() -> {
-                for (int i = 0; i < dungeonGatesPosList.size(); i++) {
-                    if (client.world.getBlockEntity(dungeonGatesPosList.get(i)) != null && client.world.getBlockEntity(dungeonGatesPosList.get(i)) instanceof DungeonGateEntity) {
-                        DungeonGateEntity dungeonGateEntity = (DungeonGateEntity) client.world.getBlockEntity(dungeonGatesPosList.get(i));
-                        dungeonGateEntity.setBlockId(new Identifier(blockId));
+            String blockId = payload.blockId();
+            String particleId = payload.particleEffect();
+            String unlockItemId = payload.unlockItem();
+
+            context.client().execute(() -> {
+                Iterator<BlockPos> iterator = dungeonGatesPosList.iterator();
+                while (iterator.hasNext()) {
+                    BlockPos pos = iterator.next();
+                    if (context.client().world.getBlockEntity(pos) != null && context.client().world.getBlockEntity(pos) instanceof DungeonGateEntity) {
+                        DungeonGateEntity dungeonGateEntity = (DungeonGateEntity) context.client().world.getBlockEntity(pos);
+                        dungeonGateEntity.setBlockId(Identifier.of(blockId));
                         dungeonGateEntity.setParticleEffectId(particleId);
                         dungeonGateEntity.setUnlockItemId(unlockItemId);
                     }
                 }
             });
         });
-        ClientPlayNetworking.registerGlobalReceiver(DungeonServerPacket.DUNGEON_TELEPORT_COUNTDOWN_PACKET, (client, handler, buf, sender) -> {
-            int dungeonTeleportCountdown = buf.readInt();
-            client.execute(() -> {
-                ((InGameHudAccess) client.inGameHud).setDungeonCountdownTicks(dungeonTeleportCountdown);
-                client.player.playSound(SoundInit.DUNGEON_COUNTDOWN_EVENT, 1.0f, 1.0f);
+        ClientPlayNetworking.registerGlobalReceiver(DungeonTeleportCountdownPacket.PACKET_ID, (payload, context) -> {
+            int dungeonTeleportCountdown = payload.countdownTicks();
+            context.client().execute(() -> {
+                ((InGameHudAccess) context.client().inGameHud).setDungeonCountdownTicks(dungeonTeleportCountdown);
+                context.player().playSound(SoundInit.DUNGEON_COUNTDOWN_EVENT, 1.0f, 1.0f);
             });
         });
     }
 
     public static void writeC2SChangeDifficultyPacket(MinecraftClient client, BlockPos portalBlockPos) {
-        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-        buf.writeBlockPos(portalBlockPos);
-        CustomPayloadC2SPacket packet = new CustomPayloadC2SPacket(DungeonServerPacket.CHANGE_DUNGEON_DIFFICULTY_PACKET, buf);
-        client.getNetworkHandler().sendPacket(packet);
+        ClientPlayNetworking.send(new DungeonDifficultyPacket(portalBlockPos));
     }
 
     public static void writeC2SChangeEffectsPacket(MinecraftClient client, BlockPos portalBlockPos, boolean disableEffects) {
-        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-        buf.writeBlockPos(portalBlockPos);
-        buf.writeBoolean(disableEffects);
-        CustomPayloadC2SPacket packet = new CustomPayloadC2SPacket(DungeonServerPacket.CHANGE_DUNGEON_EFFECTS_PACKET, buf);
-        client.getNetworkHandler().sendPacket(packet);
+        ClientPlayNetworking.send(new DungeonEffectPacket(portalBlockPos, disableEffects));
     }
 
     public static void writeC2SChangePrivateGroupPacket(MinecraftClient client, BlockPos portalBlockPos, boolean privateGroup) {
-        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-        buf.writeBlockPos(portalBlockPos);
-        buf.writeBoolean(privateGroup);
-        CustomPayloadC2SPacket packet = new CustomPayloadC2SPacket(DungeonServerPacket.CHANGE_DUNGEON_PRIVATE_GROUP_PACKET, buf);
-        client.getNetworkHandler().sendPacket(packet);
+        ClientPlayNetworking.send(new DungeonEffectPacket(portalBlockPos, privateGroup));
     }
 
     public static void writeC2SDungeonTeleportPacket(MinecraftClient client, BlockPos portalBlockPos, @Nullable UUID requiredMinGroupUuid) {
-        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-        buf.writeBlockPos(portalBlockPos);
-        buf.writeBoolean(requiredMinGroupUuid != null);
-        if (requiredMinGroupUuid != null) {
-            buf.writeUuid(requiredMinGroupUuid);
-        }
-        CustomPayloadC2SPacket packet = new CustomPayloadC2SPacket(DungeonServerPacket.DUNGEON_TELEPORT_PACKET, buf);
-        client.getNetworkHandler().sendPacket(packet);
+        ClientPlayNetworking.send(new DungeonTeleportPacket(portalBlockPos, requiredMinGroupUuid != null, requiredMinGroupUuid));
     }
 
     public static void writeC2SSetDungeonTypePacket(MinecraftClient client, String dungeonType, String defaultDifficulty, BlockPos portalBlockPos) {
-        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-        buf.writeBlockPos(portalBlockPos);
-        buf.writeString(dungeonType);
-        buf.writeString(defaultDifficulty);
-        CustomPayloadC2SPacket packet = new CustomPayloadC2SPacket(DungeonServerPacket.SET_DUNGEON_TYPE_PACKET, buf);
-        client.getNetworkHandler().sendPacket(packet);
+        ClientPlayNetworking.send(new DungeonTypePacket(portalBlockPos, dungeonType, defaultDifficulty));
     }
 
     public static void writeC2SSetGateBlockPacket(MinecraftClient client, String blockId, String particleId, String unlockItemId, BlockPos portalBlockPos) {
-        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-        buf.writeBlockPos(portalBlockPos);
-        buf.writeString(blockId);
-        buf.writeString(particleId);
-        buf.writeString(unlockItemId);
-        CustomPayloadC2SPacket packet = new CustomPayloadC2SPacket(DungeonServerPacket.SET_GATE_BLOCK_PACKET, buf);
-        client.getNetworkHandler().sendPacket(packet);
+        ClientPlayNetworking.send(new DungeonGatePacket(portalBlockPos, blockId, particleId, unlockItemId));
     }
 
     public static void writeC2SSetDungeonCompassPacket(MinecraftClient client, String dungeonType) {
-        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-        buf.writeString(dungeonType);
-        CustomPayloadC2SPacket packet = new CustomPayloadC2SPacket(DungeonServerPacket.SET_DUNGEON_COMPASS_PACKET, buf);
-        client.getNetworkHandler().sendPacket(packet);
+        ClientPlayNetworking.send(new DungeonCompassPacket(dungeonType));
     }
 }

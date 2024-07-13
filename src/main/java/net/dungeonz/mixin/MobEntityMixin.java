@@ -58,7 +58,7 @@ public abstract class MobEntityMixin extends LivingEntity implements BossEntityA
     @Override
     public void onDeath(DamageSource damageSource) {
         if (!this.getWorld().isClient() && this.isDungeonBossEntity) {
-            ServerWorld nonDungeonWorld = getWorld().getServer().getWorld(RegistryKey.of(RegistryKeys.WORLD, new Identifier(this.worldRegistryKey)));
+            ServerWorld nonDungeonWorld = getWorld().getServer().getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(this.worldRegistryKey)));
 
             if (nonDungeonWorld != null && nonDungeonWorld.getBlockEntity(this.portalPos) != null && nonDungeonWorld.getBlockEntity(this.portalPos) instanceof DungeonPortalEntity) {
                 ((DungeonPortalEntity) nonDungeonWorld.getBlockEntity(this.portalPos)).finishDungeon((ServerWorld) this.getWorld(), this.getBlockPos());

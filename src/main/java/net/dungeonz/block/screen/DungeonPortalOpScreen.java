@@ -76,20 +76,12 @@ public class DungeonPortalOpScreen extends Screen {
     }
 
     @Override
-    public void tick() {
-        this.dungeonTypeTextFieldWidget.tick();
-        this.dungeonDefaultDifficultyTextFieldWidget.tick();
-    }
-
-    @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context);
+        super.render(context, mouseX, mouseY, delta);
         context.drawTextWithShadow(this.textRenderer, DUNGEON_TYPE_TEXT, this.width / 2 - 153, 40, 0xA0A0A0);
         this.dungeonTypeTextFieldWidget.render(context, mouseX, mouseY, delta);
         context.drawTextWithShadow(this.textRenderer, DEFAULT_DIFFICULTY_TEXT, this.width / 2 - 153, 75, 0xA0A0A0);
         this.dungeonDefaultDifficultyTextFieldWidget.render(context, mouseX, mouseY, delta);
-
-        super.render(context, mouseX, mouseY, delta);
     }
 
     private void updateDoneButtonState() {

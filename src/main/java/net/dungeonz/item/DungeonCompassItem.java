@@ -1,17 +1,17 @@
 package net.dungeonz.item;
 
 import java.util.List;
+import java.util.Optional;
 
 import net.dungeonz.init.ItemInit;
+import net.dungeonz.item.component.DungeonCompassComponent;
 import net.dungeonz.network.DungeonServerPacket;
 import net.minecraft.block.Blocks;
-import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
-import net.minecraft.item.Vanishable;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -24,10 +24,7 @@ import net.minecraft.util.math.GlobalPos;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
-public class DungeonCompassItem extends Item implements Vanishable {
-
-    public static final String DUNGEON_TYPE_KEY = "DungeonType";
-    public static final String DUNGEON_POS_KEY = "DungeonPos";
+public class DungeonCompassItem extends Item {
 
     public DungeonCompassItem(Item.Settings settings) {
         super(settings);
@@ -39,7 +36,7 @@ public class DungeonCompassItem extends Item implements Vanishable {
             return;
         }
         if (hasDungeon(stack) && world.getTime() % 100 == 0 && !hasDungeonStructure(stack)) {
-            setCompassDungeonStructure((ServerWorld) world, entity.getBlockPos(), stack, stack.getNbt().getString(DUNGEON_TYPE_KEY));
+            setCompassDungeonStructure((ServerWorld) world, entity.getBlockPos(), stack, stack.get(ItemInit.DUNGEON_COMPASS_DATA).dungeonType());
         }
     }
 
@@ -51,7 +48,7 @@ public class DungeonCompassItem extends Item implements Vanishable {
         if (world.getBlockState(blockPos).isOf(Blocks.CARTOGRAPHY_TABLE)) {
             if (!world.isClient()) {
                 DungeonServerPacket.writeS2COpenCompassScreenPacket((ServerPlayerEntity) context.getPlayer(),
-                        context.getStack().getNbt() != null ? context.getStack().getNbt().getString(DUNGEON_TYPE_KEY) : "");
+                        context.getStack().get(ItemInit.DUNGEON_COMPASS_DATA) != null ? context.getStack().get(ItemInit.DUNGEON_COMPASS_DATA).dungeonType() : "");
             }
             return ActionResult.success(world.isClient());
         }
@@ -59,12 +56,11 @@ public class DungeonCompassItem extends Item implements Vanishable {
     }
 
     public static boolean hasDungeon(ItemStack stack) {
-        NbtCompound nbtCompound = stack.getNbt();
-        return nbtCompound != null && nbtCompound.contains(DUNGEON_TYPE_KEY);
+        return stack.get(ItemInit.DUNGEON_COMPASS_DATA) != null;
     }
 
     public static boolean hasDungeonStructure(ItemStack itemStack) {
-        if (itemStack.getNbt() != null && itemStack.getNbt().contains(DUNGEON_POS_KEY + "X")) {
+        if (itemStack.get(ItemInit.DUNGEON_COMPASS_DATA) != null && itemStack.get(ItemInit.DUNGEON_COMPASS_DATA).hasDungeon()) {
             return true;
         }
         return false;
@@ -72,9 +68,8 @@ public class DungeonCompassItem extends Item implements Vanishable {
 
     @Nullable
     public static BlockPos getDungeonStructurePos(ItemStack itemStack) {
-        if (itemStack.hasNbt() && itemStack.getNbt().contains(DUNGEON_POS_KEY + "X")) {
-            NbtCompound nbt = itemStack.getNbt();
-            return new BlockPos(nbt.getInt(DUNGEON_POS_KEY + "X"), nbt.getInt(DUNGEON_POS_KEY + "Y"), nbt.getInt(DUNGEON_POS_KEY + "Z"));
+        if (itemStack.get(ItemInit.DUNGEON_COMPASS_DATA) != null && itemStack.get(ItemInit.DUNGEON_COMPASS_DATA).hasDungeon()) {
+            return itemStack.get(ItemInit.DUNGEON_COMPASS_DATA).dungeonPos().get();
         }
         return null;
     }
@@ -87,33 +82,24 @@ public class DungeonCompassItem extends Item implements Vanishable {
 
     public static void setCompassDungeonStructure(ServerWorld world, BlockPos playerPos, ItemStack itemStack, String dungeonType) {
         if (itemStack.isOf(ItemInit.DUNGEON_COMPASS)) {
-            NbtCompound nbt = itemStack.getOrCreateNbt();
-
-            nbt.putString(DUNGEON_TYPE_KEY, dungeonType);
             BlockPos structurePos = getDungeonStructurePos(world, dungeonType, playerPos);
-            if (structurePos != null) {
-                nbt.putInt(DUNGEON_POS_KEY + "X", structurePos.getX());
-                nbt.putInt(DUNGEON_POS_KEY + "Y", structurePos.getY());
-                nbt.putInt(DUNGEON_POS_KEY + "Z", structurePos.getZ());
-            } else {
-                nbt.remove(DUNGEON_POS_KEY + "X");
-                nbt.remove(DUNGEON_POS_KEY + "Y");
-                nbt.remove(DUNGEON_POS_KEY + "Z");
+            if (structurePos == null) {
+                structurePos = BlockPos.ofFloored(0, 0, 0);
             }
-            itemStack.setNbt(nbt);
+            itemStack.set(ItemInit.DUNGEON_COMPASS_DATA, new DungeonCompassComponent(dungeonType, structurePos != null, Optional.of(structurePos)));
         }
     }
 
     @Nullable
     private static BlockPos getDungeonStructurePos(ServerWorld world, String dungeonType, BlockPos playerPos) {
-        return world.locateStructure(TagKey.of(RegistryKeys.STRUCTURE, new Identifier("dungeonz", dungeonType)), playerPos, 100, false);
+        return world.locateStructure(TagKey.of(RegistryKeys.STRUCTURE, Identifier.of("dungeonz", dungeonType)), playerPos, 100, false);
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, World world, List<Text> tooltip, TooltipContext context) {
-        super.appendTooltip(stack, world, tooltip, context);
-        if (stack.hasNbt() && stack.getNbt().contains(DUNGEON_TYPE_KEY)) {
-            tooltip.add(Text.translatable("dungeon." + stack.getNbt().getString(DUNGEON_TYPE_KEY)));
+    public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, TooltipType type) {
+        super.appendTooltip(stack, context, tooltip, type);
+        if (stack.get(ItemInit.DUNGEON_COMPASS_DATA) != null) {
+            tooltip.add(Text.translatable("dungeon." + stack.get(ItemInit.DUNGEON_COMPASS_DATA).dungeonType()));
         } else {
             tooltip.add(Text.translatable("compass.compass_item.cartography"));
         }

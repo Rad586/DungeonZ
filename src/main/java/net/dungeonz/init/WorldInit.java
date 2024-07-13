@@ -11,7 +11,7 @@ public class WorldInit {
     public static StructureType<DimensionStructure> DIMENSION_STRUCTURES;
 
     public static void init() {
-        DIMENSION_STRUCTURES = Registry.register(Registries.STRUCTURE_TYPE, new Identifier("dungeonz", "dimension_structures"), () -> DimensionStructure.CODEC);
+        DIMENSION_STRUCTURES = Registry.register(Registries.STRUCTURE_TYPE, Identifier.of("dungeonz", "dimension_structures"), () -> DimensionStructure.CODEC);
     }
 
 }

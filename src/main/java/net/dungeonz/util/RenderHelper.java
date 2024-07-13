@@ -8,12 +8,13 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.text.Text;
 
 @Environment(EnvType.CLIENT)
 public class RenderHelper {
 
-    public static void renderDungeonCountdown(DrawContext context, float tickDelta) {
+    public static void renderDungeonCountdown(DrawContext context, RenderTickCounter tickDelta) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (((InGameHudAccess) client.inGameHud).getDungeonCountdownRemainingTicks() > 0) {
             RenderSystem.enableBlend();

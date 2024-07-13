@@ -45,7 +45,8 @@ public class ServerPlayerInteractionManagerMixin {
     @Final
     protected ServerPlayerEntity player;
 
-    @Inject(method = "tryBreakBlock", at = @At(value = "INVOKE", target = "Lnet/minecraft/block/Block;onBreak(Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/BlockState;Lnet/minecraft/entity/player/PlayerEntity;)V"), cancellable = true)
+    //net/minecraft/block/Block.onBreak (Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/BlockState;Lnet/minecraft/entity/player/PlayerEntity;)Lnet/minecraft/block/BlockState;
+    @Inject(method = "tryBreakBlock", at = @At(value = "INVOKE", target = "Lnet/minecraft/block/Block;onBreak(Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/BlockState;Lnet/minecraft/entity/player/PlayerEntity;)Lnet/minecraft/block/BlockState;"), cancellable = true)
     private void tryBreakBlockMixin(BlockPos pos, CallbackInfoReturnable<Boolean> info) {
         if (!player.getWorld().isClient() && player.getWorld().getRegistryKey() == DimensionInit.DUNGEON_WORLD) {
             if (!player.isCreative() && DungeonHelper.getCurrentDungeon(player) != null

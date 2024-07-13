@@ -14,7 +14,7 @@
         }
     },
     "result": {
-        "item": "dungeonz:dungeon_compass",
+        "id": "dungeonz:dungeon_compass",
         "count": 1
     }
 }

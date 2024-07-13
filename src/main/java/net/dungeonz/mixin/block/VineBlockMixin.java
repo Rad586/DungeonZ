@@ -14,13 +14,11 @@ import net.minecraft.block.VineBlock;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 
-@SuppressWarnings("deprecation")
 @Mixin(VineBlock.class)
 public abstract class VineBlockMixin extends Block {
 
@@ -29,17 +27,16 @@ public abstract class VineBlockMixin extends Block {
     }
 
     @Override
-    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         if (ConfigInit.CONFIG.devMode && world.getBlockState(pos).isOf(Blocks.VINE)) {
-            if (!world.isClient) {
+            if (!world.isClient()) {
                 if (world.isAir(pos.down())) {
                     world.setBlockState(pos.down(), (BlockState) this.getDefaultState().with(VineBlock.getFacingProperty(hit.getSide().getOpposite()), true), Block.NOTIFY_LISTENERS);
                 }
             }
             return ActionResult.success(world.isClient);
         }
-        return super.onUse(state, world, pos, player, hand, hit);
-
+        return super.onUse(state, world, pos, player, hit);
     }
 
     @Inject(method = "randomTick", at = @At("HEAD"), cancellable = true)

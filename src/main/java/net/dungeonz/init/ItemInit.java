@@ -1,10 +1,13 @@
 package net.dungeonz.init;
 
 import java.util.List;
+import java.util.function.UnaryOperator;
 
 import net.dungeonz.item.*;
+import net.dungeonz.item.component.DungeonCompassComponent;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.minecraft.component.ComponentType;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
@@ -19,16 +22,24 @@ import net.minecraft.util.Identifier;
 public class ItemInit {
 
     // Item Group
-    public static final RegistryKey<ItemGroup> DUNGEONZ_ITEM_GROUP = RegistryKey.of(RegistryKeys.ITEM_GROUP, new Identifier("dungeonz", "item_group"));
+    public static final RegistryKey<ItemGroup> DUNGEONZ_ITEM_GROUP = RegistryKey.of(RegistryKeys.ITEM_GROUP, Identifier.of("dungeonz", "item_group"));
+
+    // Component
+    public static final ComponentType<DungeonCompassComponent> DUNGEON_COMPASS_DATA = registerComponent("fill_level",
+            builder -> builder.codec(DungeonCompassComponent.CODEC).packetCodec(DungeonCompassComponent.PACKET_CODEC));
 
     public static final List<ItemStack> REQUIRED_DUNGEON_COMPASS_CALIBRATION_ITEMS = List.of(new ItemStack(Items.AMETHYST_SHARD, 3));
 
     public static final Item DUNGEON_COMPASS = new DungeonCompassItem(new Item.Settings().maxCount(1));
 
+    private static <T> ComponentType<T> registerComponent(String id, UnaryOperator<ComponentType.Builder<T>> builderOperator) {
+        return Registry.register(Registries.DATA_COMPONENT_TYPE, id, builderOperator.apply(ComponentType.builder()).build());
+    }
+
     public static void init() {
         Registry.register(Registries.ITEM_GROUP, DUNGEONZ_ITEM_GROUP,
                 FabricItemGroup.builder().icon(() -> new ItemStack(DUNGEON_COMPASS)).displayName(Text.translatable("item.dungeonz.item_group")).build());
-        Registry.register(Registries.ITEM, new Identifier("dungeonz", "dungeon_compass"), DUNGEON_COMPASS);
+        Registry.register(Registries.ITEM, Identifier.of("dungeonz", "dungeon_compass"), DUNGEON_COMPASS);
         ItemGroupEvents.modifyEntriesEvent(DUNGEONZ_ITEM_GROUP).register(entries -> entries.add(DUNGEON_COMPASS));
     }
 

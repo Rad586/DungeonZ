@@ -1,6 +1,5 @@
 package net.dungeonz.mixin.item;
 
-import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,7 +17,6 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.item.SpawnEggItem;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -34,7 +32,7 @@ public class SpawnEggItemMixin {
         BlockEntity blockEntity;
         if (blockState.isOf(BlockInit.DUNGEON_SPAWNER) && (blockEntity = world.getBlockEntity(blockPos)) instanceof DungeonSpawnerEntity) {
             DungeonSpawnerLogic dungeonSpawnerLogic = ((DungeonSpawnerEntity) blockEntity).getLogic();
-            EntityType<?> entityType = this.getEntityType(itemStack.getNbt());
+            EntityType<?> entityType = this.getEntityType(itemStack);
             dungeonSpawnerLogic.setEntityId(entityType);
             blockEntity.markDirty();
             world.updateListeners(blockPos, blockState, blockState, Block.NOTIFY_ALL);
@@ -42,10 +40,11 @@ public class SpawnEggItemMixin {
             itemStack.decrement(1);
             info.setReturnValue(ActionResult.CONSUME);
         }
+
     }
 
     @Shadow
-    public EntityType<?> getEntityType(@Nullable NbtCompound nbt) {
+    public EntityType<?> getEntityType(ItemStack stack) {
         return null;
     }
 }

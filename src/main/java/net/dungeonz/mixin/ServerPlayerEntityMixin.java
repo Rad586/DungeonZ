@@ -45,7 +45,7 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity implements Se
         this.dungeonPortalBlockPos = new BlockPos(nbt.getInt("DungeonPortalBlockPosX"), nbt.getInt("DungeonPortalBlockPosY"), nbt.getInt("DungeonPortalBlockPosZ"));
         this.dungeonSpawnBlockPos = new BlockPos(nbt.getInt("DungeonSpawnBlockPosX"), nbt.getInt("DungeonSpawnBlockPosY"), nbt.getInt("DungeonSpawnBlockPosZ"));
         if (nbt.contains("DungeonRegistryKey")) {
-            this.oldWorld = this.server.getWorld(RegistryKey.of(RegistryKeys.WORLD, new Identifier(nbt.getString("DungeonRegistryKey"))));
+            this.oldWorld = this.server.getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(nbt.getString("DungeonRegistryKey"))));
         }
     }
 

@@ -54,7 +54,7 @@ public abstract class PlayerEntityMixin extends LivingEntity {
 
     @Override
     public boolean addStatusEffect(StatusEffectInstance effect, Entity source) {
-        if (!this.getWorld().isClient() && effect.getEffectType().isBeneficial() && this.getWorld().getRegistryKey() == DimensionInit.DUNGEON_WORLD) {
+        if (!this.getWorld().isClient() && effect.getEffectType().value().isBeneficial() && this.getWorld().getRegistryKey() == DimensionInit.DUNGEON_WORLD) {
             if (DungeonHelper.getDungeonPortalEntity((ServerPlayerEntity) (Object) this) != null && DungeonHelper.getDungeonPortalEntity((ServerPlayerEntity) (Object) this).getDisableEffects()) {
                 return false;
             }

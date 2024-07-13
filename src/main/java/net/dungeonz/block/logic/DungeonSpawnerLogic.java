@@ -6,6 +6,7 @@ import java.util.function.Function;
 
 import net.dungeonz.dungeon.Dungeon;
 import net.dungeonz.dungeon.DungeonPlacementHandler;
+import net.minecraft.block.spawner.MobSpawnerEntry;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
@@ -25,7 +26,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.EntityView;
-import net.minecraft.world.MobSpawnerEntry;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldEvents;
 import net.minecraft.world.event.GameEvent;
@@ -115,8 +115,9 @@ public abstract class DungeonSpawnerLogic {
             double d = j >= 1 ? nbtList.getDouble(0) : (double) pos.getX() + (random.nextDouble() - random.nextDouble()) * (double) this.spawnRange + 0.5;
             double e = j >= 2 ? nbtList.getDouble(1) : (double) (pos.getY() + random.nextInt(3) - 1);
             f = j >= 3 ? nbtList.getDouble(2) : (double) pos.getZ() + (random.nextDouble() - random.nextDouble()) * (double) this.spawnRange + 0.5;
-            if (!world.isSpaceEmpty(optional.get().createSimpleBoundingBox(d, e, f)))
+            if (!world.isSpaceEmpty(optional.get().getSpawnBox(d, e, f))) {
                 continue;
+            }
             BlockPos blockPos = BlockPos.ofFloored(d, e, f);
             // if (!this.spawnEntry.getCustomSpawnRules().isPresent() ? !SpawnRestriction.canSpawn(optional.get(), world, SpawnReason.SPAWNER, blockPos, world.getRandom())
             // : !optional.get().getSpawnGroup().isPeaceful() && world.getDifficulty() == Difficulty.PEACEFUL
@@ -143,7 +144,7 @@ public abstract class DungeonSpawnerLogic {
                 if (this.spawnEntry.getCustomSpawnRules().isEmpty() && !mobEntity.canSpawn(world, SpawnReason.SPAWNER) || !mobEntity.canSpawn(world))
                     continue;
                 if (this.spawnEntry.getNbt().getSize() == 1 && this.spawnEntry.getNbt().contains("id", NbtElement.STRING_TYPE)) {
-                    ((MobEntity) entity2).initialize(world, world.getLocalDifficulty(entity2.getBlockPos()), SpawnReason.SPAWNER, null, null);
+                    ((MobEntity) entity2).initialize(world, world.getLocalDifficulty(entity2.getBlockPos()), SpawnReason.SPAWNER, null);
                 }
                 if (dungeon != null) {
                     DungeonPlacementHandler.strengthenMob(mobEntity, dungeon, difficulty, false);
@@ -172,7 +173,7 @@ public abstract class DungeonSpawnerLogic {
     private void updateSpawns(World world, BlockPos pos) {
         Random random = world.random;
         this.spawnDelay = this.maxSpawnDelay <= this.minSpawnDelay ? this.minSpawnDelay : this.minSpawnDelay + random.nextInt(this.maxSpawnDelay - this.minSpawnDelay);
-        this.spawnPotentials.getOrEmpty(random).ifPresent(spawnPotential -> this.setSpawnEntry(world, pos, (MobSpawnerEntry) spawnPotential.getData()));
+        this.spawnPotentials.getOrEmpty(random).ifPresent(spawnPotential -> this.setSpawnEntry(world, pos, (MobSpawnerEntry) spawnPotential.data()));
         this.sendStatus(world, pos, 1);
     }
 
@@ -195,7 +196,7 @@ public abstract class DungeonSpawnerLogic {
                         .orElseGet(MobSpawnerEntry::new);
                 this.setSpawnEntry(world, pos, mobSpawnerEntry2);
             } else {
-                this.spawnPotentials.getOrEmpty(world.getRandom()).ifPresent(spawnPotential -> this.setSpawnEntry(world, pos, (MobSpawnerEntry) spawnPotential.getData()));
+                this.spawnPotentials.getOrEmpty(world.getRandom()).ifPresent(spawnPotential -> this.setSpawnEntry(world, pos, (MobSpawnerEntry) spawnPotential.data()));
             }
         }
         if (nbt.contains("MinSpawnDelay", NbtElement.NUMBER_TYPE)) {

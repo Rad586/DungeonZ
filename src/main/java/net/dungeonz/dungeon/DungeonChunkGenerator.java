@@ -1,6 +1,6 @@
 package net.dungeonz.dungeon;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.block.BlockState;
@@ -32,19 +32,18 @@ import net.minecraft.world.gen.noise.NoiseConfig;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 public class DungeonChunkGenerator extends ChunkGenerator {
 
-    public static final Codec<DungeonChunkGenerator> CODEC = RecordCodecBuilder
-            .create(instance -> instance.group(RegistryOps.getEntryCodec(BiomeKeys.PLAINS)).apply(instance, instance.stable(DungeonChunkGenerator::new)));
+    public static final MapCodec<DungeonChunkGenerator> CODEC = RecordCodecBuilder
+            .mapCodec(instance -> instance.group(RegistryOps.getEntryCodec(BiomeKeys.PLAINS)).apply(instance, instance.stable(DungeonChunkGenerator::new)));
 
     public DungeonChunkGenerator(RegistryEntry.Reference<Biome> biomeEntry) {
         super(new FixedBiomeSource(biomeEntry));
     }
 
     @Override
-    protected Codec<? extends ChunkGenerator> getCodec() {
+    protected MapCodec<? extends ChunkGenerator> getCodec() {
         return CODEC;
     }
 
@@ -94,7 +93,7 @@ public class DungeonChunkGenerator extends ChunkGenerator {
     }
 
     @Override
-    public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
+    public CompletableFuture<Chunk> populateNoise(Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
         return CompletableFuture.completedFuture(chunk);
     }
 

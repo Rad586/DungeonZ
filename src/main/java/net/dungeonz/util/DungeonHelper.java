@@ -17,9 +17,7 @@ import net.dungeonz.dungeon.Dungeon;
 import net.dungeonz.dungeon.DungeonPlacementHandler;
 import net.dungeonz.init.DimensionInit;
 import net.dungeonz.network.DungeonServerPacket;
-import net.fabricmc.fabric.api.dimension.v1.FabricDimensions;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
@@ -28,6 +26,8 @@ import net.minecraft.loot.context.LootContextParameterSet;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.context.LootContextTypes;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -84,9 +84,7 @@ public class DungeonHelper {
         Iterator<Entry<String, String>> lootTableIterator = dungeon.getDifficultyBossLootTableMap().entrySet().iterator();
         while (lootTableIterator.hasNext()) {
             Entry<String, String> entry = lootTableIterator.next();
-
-            LootTable lootTable = server.getLootManager().getLootTable(new Identifier(entry.getValue()));
-
+            LootTable lootTable = server.getReloadableRegistries().getLootTable(RegistryKey.of(RegistryKeys.LOOT_TABLE, Identifier.of(entry.getValue())));
             LootContextParameterSet.Builder builder = new LootContextParameterSet.Builder(server.getOverworld()).add(LootContextParameters.ORIGIN,
                     server.getOverworld().getPlayers().get(server.getOverworld().getRandom().nextInt(server.getOverworld().getPlayers().size())).getPos());
             Inventory inventory = new SimpleInventory(27);
@@ -123,7 +121,7 @@ public class DungeonHelper {
             if (player.getWorld().getRegistryKey() == DimensionInit.DUNGEON_WORLD) {
                 ServerWorld oldWorld = ((ServerPlayerAccess) player).getOldServerWorld();
                 if (oldWorld != null) {
-                    FabricDimensions.teleport(player, oldWorld, DungeonPlacementHandler.leave(player, oldWorld));
+                    player.teleportTo(DungeonPlacementHandler.leave(player, oldWorld));
                     return;
                 }
             } else {
@@ -197,8 +195,8 @@ public class DungeonHelper {
     }
 
     public static void teleportPlayer(ServerPlayerEntity serverPlayerEntity, ServerWorld dungeonWorld, DungeonPortalEntity dungeonPortalEntity, BlockPos dungeonPortalPos) {
-        ServerPlayerEntity playerEntity = FabricDimensions.teleport(serverPlayerEntity, dungeonWorld, DungeonPlacementHandler.enter(serverPlayerEntity, dungeonWorld,
-                serverPlayerEntity.getServerWorld(), dungeonPortalEntity, dungeonPortalPos, dungeonPortalEntity.getDifficulty(), dungeonPortalEntity.getDisableEffects()));
+        ServerPlayerEntity playerEntity = (ServerPlayerEntity) serverPlayerEntity.teleportTo(DungeonPlacementHandler.enter(serverPlayerEntity, dungeonWorld, serverPlayerEntity.getServerWorld(),
+                dungeonPortalEntity, dungeonPortalPos, dungeonPortalEntity.getDifficulty(), dungeonPortalEntity.getDisableEffects()));
 
         DungeonServerPacket.writeS2CDungeonInfoPacket(playerEntity, dungeonPortalEntity.getDungeon().getBreakableBlockIdList(), dungeonPortalEntity.getDungeon().getplaceableBlockIdList(),
                 dungeonPortalEntity.getDungeon().isElytraAllowed());
@@ -207,15 +205,17 @@ public class DungeonHelper {
     public static void teleportOutOfDungeon(ServerPlayerEntity player) {
         ServerWorld oldWorld = ((ServerPlayerAccess) player).getOldServerWorld();
         if (oldWorld != null) {
-            FabricDimensions.teleport(player, oldWorld, DungeonPlacementHandler.leave(player, oldWorld));
+            player.teleportTo(DungeonPlacementHandler.leave(player, oldWorld));
         } else {
             Vec3d spawnPos = null;
             if (player.getSpawnPointPosition() != null) {
                 spawnPos = new Vec3d(player.getSpawnPointPosition().getX(), player.getSpawnPointPosition().getY(), player.getSpawnPointPosition().getZ());
             } else {
-                spawnPos = PlayerEntity.findRespawnPosition(player.server.getWorld(player.getSpawnPointDimension()), ((ServerPlayerAccess) player).getDungeonSpawnBlockPos(), 0.0f, true, true).get();
+                // spawnPos = ServerPlayerEntity.findRespawnPosition(player.server.getWorld(player.getSpawnPointDimension()), ((ServerPlayerAccess) player).getDungeonSpawnBlockPos(), 0.0f, true,
+                // true).get();
+                player.teleportTo(player.getRespawnTarget(true, TeleportTarget.NO_OP));
             }
-            FabricDimensions.teleport(player, player.server.getWorld(player.getSpawnPointDimension()), new TeleportTarget(spawnPos, new Vec3d(0.0D, 0.0D, 0.0D), 0.0f, 0.0f));
+            player.teleportTo(new TeleportTarget(player.server.getWorld(player.getSpawnPointDimension()), spawnPos, new Vec3d(0.0D, 0.0D, 0.0D), 0.0f, 0.0f, TeleportTarget.NO_OP));
         }
     }
 
