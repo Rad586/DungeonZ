@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
+import net.dungeonz.block.DungeonPortalBlock;
 import org.jetbrains.annotations.Nullable;
 
 import net.dungeonz.DungeonzMain;
@@ -111,8 +112,12 @@ public class DungeonServerPacket {
                     if (Dungeon.getDungeon(dungeonType) != null) {
                         Dungeon dungeon = Dungeon.getDungeon(dungeonType);
                         if (dungeon.getDifficultyList().contains(defaultDifficulty)) {
-                            if (context.player().getWorld().getBlockEntity(dungeonPortalPos) != null
-                                    && context.player().getWorld().getBlockEntity(dungeonPortalPos) instanceof DungeonPortalEntity dungeonPortalEntity) {
+                            BlockPos pos = dungeonPortalPos;
+                            if (DungeonPortalBlock.isOtherDungeonPortalBlockNearby(context.player().getWorld(), dungeonPortalPos)) {
+                                pos = DungeonPortalBlock.getMainDungeonPortalBlockPos(context.player().getWorld(), pos);
+                            }
+                            if (context.player().getWorld().getBlockEntity(pos) != null
+                                    && context.player().getWorld().getBlockEntity(pos) instanceof DungeonPortalEntity dungeonPortalEntity) {
                                 dungeonPortalEntity.setDungeonType(dungeonType);
                                 dungeonPortalEntity.setDifficulty(defaultDifficulty);
                                 dungeonPortalEntity.setMaxGroupSize(dungeon.getMaxGroupSize());

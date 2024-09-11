@@ -52,7 +52,7 @@ public class DimensionStructure extends Structure {
     private final String dungeonType;
 
     public DimensionStructure(Structure.Config config, RegistryEntry<StructurePool> startPool, Optional<Identifier> startJigsawName, int size, HeightProvider startHeight,
-            Optional<Heightmap.Type> projectStartToHeightmap, int maxDistanceFromCenter, String dungeonType) {
+                              Optional<Heightmap.Type> projectStartToHeightmap, int maxDistanceFromCenter, String dungeonType) {
         super(config);
         this.startPool = startPool;
         this.startJigsawName = startJigsawName;
@@ -137,12 +137,14 @@ public class DimensionStructure extends Structure {
         });
 
         if (!list.isEmpty()) {
-            DungeonPortalEntity dungeonPortalEntity = (DungeonPortalEntity) world.getBlockEntity(list.get(0));
-            dungeonPortalEntity.setDungeonType(dungeonType);
-            dungeonPortalEntity.setDifficulty(dungeonPortalEntity.getDungeon().getDifficultyList().get(0));
-            dungeonPortalEntity.setMaxGroupSize(dungeonPortalEntity.getDungeon().getMaxGroupSize());
-            dungeonPortalEntity.setMinGroupSize(dungeonPortalEntity.getDungeon().getMinGroupSize());
-            dungeonPortalEntity.markDirty();
+            for (int i = 0; i < list.size(); i++) {
+                DungeonPortalEntity dungeonPortalEntity = (DungeonPortalEntity) world.getBlockEntity(list.get(i));
+                dungeonPortalEntity.setDungeonType(dungeonType);
+                dungeonPortalEntity.setDifficulty(dungeonPortalEntity.getDungeon().getDifficultyList().get(0));
+                dungeonPortalEntity.setMaxGroupSize(dungeonPortalEntity.getDungeon().getMaxGroupSize());
+                dungeonPortalEntity.setMinGroupSize(dungeonPortalEntity.getDungeon().getMinGroupSize());
+                dungeonPortalEntity.markDirty();
+            }
         }
     }
 
