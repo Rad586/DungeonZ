@@ -7,6 +7,7 @@ import net.dungeonz.init.ItemInit;
 import net.dungeonz.item.component.DungeonCompassComponent;
 import net.dungeonz.network.DungeonServerPacket;
 import net.minecraft.block.Blocks;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -100,6 +101,9 @@ public class DungeonCompassItem extends Item {
         super.appendTooltip(stack, context, tooltip, type);
         if (stack.get(ItemInit.DUNGEON_COMPASS_DATA) != null) {
             tooltip.add(Text.translatable("dungeon." + stack.get(ItemInit.DUNGEON_COMPASS_DATA).dungeonType()));
+            if (MinecraftClient.getInstance().player != null && MinecraftClient.getInstance().player.isCreativeLevelTwoOp() && stack.get(ItemInit.DUNGEON_COMPASS_DATA).dungeonPos().isPresent()) {
+                tooltip.add(Text.of(stack.get(ItemInit.DUNGEON_COMPASS_DATA).dungeonPos().get().toShortString()));
+            }
         } else {
             tooltip.add(Text.translatable("compass.compass_item.cartography"));
         }
